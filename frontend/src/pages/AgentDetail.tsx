@@ -1,15 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAgent } from '../hooks/useAgent';
-import { useToast } from '../hooks/useToast';
 
 const AgentDetail: React.FC = () => {
   const { id: agentId } = useParams<{ id: string }>();
   const { sessionId } = useAgent(agentId);
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const [agent, setAgent] = useState<any>(null);
 
-  // Navigate back to agents list
+  useEffect(() => {
+    try {
+      const savedAgents = JSON.parse(localStorage.getItem('ai_agents') || '[]');
+      const found = savedAgents.find((a: any) => a._id === agentId);
+      if (found) setAgent(found);
+    } catch {
+      // ignore
+    }
+  }, [agentId]);
+
   const goBack = () => navigate('/agents');
 
   return (
@@ -27,15 +35,26 @@ const AgentDetail: React.FC = () => {
         </nav>
 
         <h1 className="text-3xl font-extrabold text-gray-900 mb-6">
-          Agent {agentId ? `(ID: ${agentId.substring(0, 8)}...)` : ''}
+          {agent?.name || `Agent ${agentId ? `(ID: ${agentId.substring(0, 8)}...)` : ''}`}
         </h1>
 
-        <div className="bg-white rounded-lg p-6 shadow mb-6">
-          <p className="text-gray-600">
-            Session: {sessionId ? `Active session: ${sessionId.substring(0, 8)}...` : 'No active session. Create or select an agent to begin.'}
+        <div className="bg-white rounded-lg p-6 shadow mb-6 space-y-3">
+          {agent && (
+            <div className="space-y-2 text-gray-700 border-b pb-4">
+              <p><strong>Description:</strong> {agent.description}</p>
+              {agent.purpose && <p><strong>Purpose:</strong> {agent.purpose}</p>}
+              {agent.industry && <p><strong>Industry:</strong> {agent.industry}</p>}
+              {agent.capabilities?.length > 0 && (
+                <p><strong>Capabilities:</strong> {agent.capabilities.join(', ')}</p>
+              )}
+              {agent.status && <p><strong>Status:</strong> {agent.status}</p>}
+            </div>
+          )}
+          <p className="text-gray-600 text-sm">
+            Session: {sessionId ? `Active session: ${sessionId.substring(0, 8)}...` : 'No active session.'}
           </p>
-          
-          <div className="mt-4 flex gap-2">
+
+          <div className="mt-4 flex gap-2 pt-2">
             <button
               onClick={() => navigate(`/test-agent/${agentId}`)}
               className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"

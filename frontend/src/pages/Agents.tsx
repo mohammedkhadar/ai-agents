@@ -1,41 +1,57 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useAgent } from '../hooks/useAgent';
+import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 
 const Agents: React.FC = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const { sessionId } = useAgent();
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch agents from API
+    const localAgents = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('ai_agents') || '[]');
+      } catch {
+        return [];
+      }
+    })();
+
     fetch('/api/agents')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('API unavailable');
+        return res.json();
+      })
       .then(data => {
-        setAgents(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setAgents(data);
+        } else {
+          setAgents(localAgents);
+        }
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Error fetching agents:', err);
+      .catch(() => {
+        setAgents(localAgents);
         setLoading(false);
-        showToast('Error loading agents', 'error');
       });
   }, [showToast]);
 
   const deleteAgent = async (id: string) => {
     if (!confirm('Are you sure you want to delete this agent?')) return;
-    
+
     try {
       await fetch(`/api/agents/${id}`, { method: 'DELETE' });
-      setAgents(prev => prev.filter(agent => agent._id !== id));
-      showToast('Agent deleted successfully', 'success');
-    } catch (err) {
-      console.error('Error deleting agent:', err);
-      showToast('Error deleting agent', 'error');
+    } catch {
+      // ignore if backend unavailable
     }
+    const updated = agents.filter(agent => agent._id !== id);
+    setAgents(updated);
+    try {
+      localStorage.setItem('ai_agents', JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+    showToast('Deleted', 'Agent deleted successfully', 'success');
   };
 
   if (loading) {
@@ -49,7 +65,7 @@ const Agents: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto p-6">
-        <nav className="mb-6">
+        <nav className="mb-6 flex items-center justify-between">
           <ol className="list-reset space-y-1">
             <li className="flex items-center gap-2">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,6 +74,12 @@ const Agents: React.FC = () => {
               <span>Your agents</span>
             </li>
           </ol>
+          <Link
+            to="/create-agent"
+            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            + Create Agent
+          </Link>
         </nav>
 
         <h1 className="text-3xl font-extrabold text-gray-900 mb-6">
@@ -69,8 +91,10 @@ const Agents: React.FC = () => {
             <p className="text-gray-500 mb-4">
               No agents yet. Create your first agent below.
             </p>
-            <Link to="/create-agent"
-              className="inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+            <Link
+              to="/create-agent"
+              className="inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            >
               Create Your First Agent
             </Link>
           </div>
@@ -80,29 +104,46 @@ const Agents: React.FC = () => {
           {agents.map((agent) => (
             <div
               key={agent._id}
-              className="bg-white rounded-lg p-6 shadow-hover transition-shadow hover:shadow-lg"
+              className="bg-white rounded-lg p-6 shadow transition-shadow hover:shadow-lg"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">
-                    {agent.name}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-gray-900">
+                      {agent.name}
+                    </h2>
+                    {agent.status && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        agent.status === 'deployed'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {agent.status}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-gray-500 text-sm mt-1">
                     {agent.description}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => navigate(`/test-agent/${agent._id}`)}
-                    className="text-indigo-600 text-sm hover:text-indigo-800 transition-colors"
+                    className="text-indigo-600 text-sm font-medium hover:text-indigo-800 transition-colors"
                   >
                     Test
                   </button>
                   <button
                     onClick={() => navigate(`/agent/${agent._id}`)}
-                    className="text-green-600 text-sm hover:text-green-800 transition-colors"
+                    className="text-green-600 text-sm font-medium hover:text-green-800 transition-colors"
                   >
                     View
+                  </button>
+                  <button
+                    onClick={() => deleteAgent(agent._id)}
+                    className="text-red-500 text-sm font-medium hover:text-red-700 transition-colors"
+                  >
+                    Delete
                   </button>
                 </div>
               </div>

@@ -1,13 +1,55 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import AgentBuilder from '../components/AgentBuilder';
+import AgentBuilder, { AgentConfig } from '../components/AgentBuilder';
 
 const CreateAgent: React.FC = () => {
   const navigate = useNavigate();
-  
-  const handleAgentCreated = (agentConfig: any) => {
-    // Navigate to test page or show success
-    navigate('/test-agent');
+
+  const handleAgentCreated = async (agentConfig: AgentConfig) => {
+    const newAgent = {
+      _id: 'agent-' + Math.random().toString(36).slice(2, 10),
+      name: agentConfig.name,
+      description: agentConfig.description,
+      purpose: agentConfig.purpose,
+      industry: agentConfig.industry,
+      capabilities: agentConfig.capabilities,
+      config: {
+        model: agentConfig.model,
+        temperature: agentConfig.temperature,
+        systemPrompt: `You are ${agentConfig.name}. Description: ${agentConfig.description}. Purpose: ${agentConfig.purpose}. Industry: ${agentConfig.industry}.`,
+      },
+      status: 'testing',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Save locally so the flow works even if backend is offline
+    try {
+      const existing = JSON.parse(localStorage.getItem('ai_agents') || '[]');
+      localStorage.setItem('ai_agents', JSON.stringify([newAgent, ...existing]));
+      localStorage.setItem('active_agent', JSON.stringify(newAgent));
+    } catch (e) {
+      console.error('Failed to save agent to localStorage:', e);
+    }
+
+    // Attempt to save to backend API as well
+    try {
+      const res = await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAgent),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        if (saved && saved._id) {
+          newAgent._id = saved._id;
+          localStorage.setItem('active_agent', JSON.stringify({ ...newAgent, ...saved }));
+        }
+      }
+    } catch {
+      // Backend optional — localStorage already saved
+    }
+
+    navigate(`/test-agent/${newAgent._id}`);
   };
 
   return (
