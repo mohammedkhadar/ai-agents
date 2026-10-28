@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent Platform Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --fg: #1e293b;
+      --muted: #64748b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --card: #ffffff;
+      --border: #e2e8f0;
+    }
+    
+    * { font-family: 'Inter', sans-serif; }
+    
+    body { 
+      background: var(--bg); 
+      color: var(--fg); 
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      color: var(--muted);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    
+    .message-user {
+      background: #d1e8e2;
+      color: #0f524d;
+    }
+    
+    .message-assistant {
+      background: #f1f5f9;
+      color: #1e293b;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-8">
+  
+  <div class="max-w-4xl mx-auto">
+    
+    <!-- Header -->
+    <header class="mb-8 text-center">
+      <h1 class="text-3xl font-extrabold mb-2">AI Agent Platform</h1>
+      <p class="text-lg text-[var(--muted)]">Create, test and deploy AI agents through natural conversation</p>
+    </header>
+    
+    <!-- Chat Area -->
+    <div id="chat-area" class="bg-white rounded-2xl p-6 mb-6 min-h-[400px] overflow-y-auto space-y-4">
+      <div class="text-center">
+        <p class="text-[var(--muted)]">Welcome! I'm your AI agent builder assistant. I'll ask you questions to understand your needs, and then build a tailored AI agent for you.</p>
+      </div>
+    </div>
+    
+    <!-- Input Area -->
+    <div class="p-4 bg-white rounded-b-2xl shadow-sm border-t border-[var(--border)]">
+      <form id="message-form" class="flex gap-2">
+        <textarea 
+          id="message-input" 
+          placeholder="Tell me about your AI agent needs..."
+          rows="1" 
+          maxRows="3"
+          class="flex-1 border border-[var(--border)] rounded-l-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+          disabled></textarea>
+        <button 
+          type="submit"
+          id="send-btn"
+          class="border border-[var(--accent)] rounded-r-lg px-5 py-3 bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled>
+          Send
+        </button>
+      </form>
+    </div>
+    
+  </div>
+  
+  <script>
+    // Conversation state
+    let sessionId = null;
+    let step = 1; // 1=name, 2=description, 3=purpose, 4=industry, 5=capabilities
+    
+    // Agent configuration being built
+    const agentConfig = {
+      name: '',
+      description: '',
+      purpose: '',
+      industry: '',
+      capabilities: []
+    };
+    
+    // Capabilities options
+    const allCapabilities = [
+      { key: 'text-generation', label: 'Text Generation' },
+      { key: 'code-generation', label: 'Code Generation' },
+      { key: 'analysis', label: 'Data Analysis' },
+      { key: 'customer-service', label: 'Customer Service' }
+    ];
+    
+    // DOM elements
+    const chatArea = document.getElementById('chat-area');
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Focus the input immediately
+      messageInput.focus();
+      
+      // Send first message on Enter
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+      
+      sendFormSubmission();
+    });
+    
+    // Send message to backend
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text || !sendBtn.disabled === false) return;
+      
+      // Add user message to UI
+      addMessage(text, 'user');
+      messageInput.value = '';
+      
+      // Disable input while waiting
+      sendBtn.disabled = true;
+      messageInput.disabled = true;
+      
+      try {
+        const response = await fetch('http://localhost:3002/api/chat/message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            message: text,
+            ...(sessionId && { sessionId })
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.sessionId) {
+          sessionId = data.sessionId;
+        }
+        
+        // Add assistant response to UI
+        if (data.response) {
+          addMessage(data.response, 'assistant');
+        }
+        
+        // Handle agent creation
+        if (data.agentCreated) {
+          showAgentCreated(data.agentCreated);
+        }
+        
+      } catch (error) {
+        addMessage('Sorry, there was an error. Please try again.', 'assistant');
+      } finally {
+        sendBtn.disabled = false;
+        messageInput.disabled = false;
+        messageInput.focus();
+      }
+    }
+    
+    // Add message to chat UI
+    function addMessage(content, role) {
+      const div = document.createElement('div');
+      div.className = `message ${role}-message ${role === 'user' ? 'message-user' : 'message-assistant'}`;
+      div.innerHTML = `<p>${escapeHtml(content)}</p>`;
+      chatArea.appendChild(div);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+    
+    // Escape HTML special characters
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Show agent created screen
+    function showAgentCreated(agent) {
+      chatArea.innerHTML = `
+        <div class="p-6 bg-green-100 rounded-lg text-green-800 mb-6">
+          <h3 class="font-bold mb-2">Agent Created Successfully!</h3>
+          <p class="mb-4">${agent.description}</p>
+          <div class="bg-white p-4 rounded">
+            <h4 class="font-medium mb-2">Agent Details:</h4>
+            <p><strong>Name:</strong> ${agent.name}</p>
+            <p><strong>Purpose:</strong> ${agent.purpose}</p>
+            <p><strong>Industry:</strong> ${agent.industry}</p>
+            <p><strong>Capabilities:</strong> ${agent.capabilities.join(', ')}</p>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button 
+            class="btn-primary flex-1"
+            onclick="window.location.href='/'"
+          >
+            Create Another Agent
+          </button>
+          <button 
+            class="btn-secondary flex-1"
+            onclick="window.location.href='/test'"
+          >
+            Test This Agent
+          </button>
+        </div>
+      `;
+    }
+    
+    // Handle form submission
+    function sendFormSubmission() {
+      messageForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        sendMessage();
+      });
+    }
+    
+    // Auto-start conversation
+    setTimeout(() => {
+      if (!sessionId) {
+        sendMessage();
+      }
+    }, 500);
+  </script>
+</body>
+</html>
