@@ -22,13 +22,19 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/chat', chatRoutes);
 
 // Health check
+app.get('/api/health', (req, res) => {
+  res.json({ message: 'AI Agent Platform Backend is running' });
+});
+
 app.get('/', (req, res) => {
   res.json({ message: 'AI Agent Platform Backend is running' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Start server when running outside Vercel serverless
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 export default app;
