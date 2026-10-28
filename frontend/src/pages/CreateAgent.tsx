@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import AgentBuilder from '../../components/AgentBuilder';
+import AgentBuilder from '../components/AgentBuilder';
 
 const CreateAgent: React.FC = () => {
   const navigate = useNavigate();

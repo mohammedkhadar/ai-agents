@@ -96,7 +96,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ agentId, onAgentCreated }
              style={{ maxHeight: '400px' }}>
           {messages.map((msg, index) => (
             <div key={index} className="mb-3">
-              <p className={msg.role === 'user' ? 'bg-blue-100 text-blue-800 rounded px-3 py-2 max-w-xs' : 'bg-gray-200 text-gray-800 rounded px-3 py-2 max-w-xs ml-auto'>
+              <p className={msg.role === 'user' ? 'bg-blue-100 text-blue-800 rounded px-3 py-2 max-w-xs' : 'bg-gray-200 text-gray-800 rounded px-3 py-2 max-w-xs ml-auto'}>
                 {msg.content}
               </p>
             </div>

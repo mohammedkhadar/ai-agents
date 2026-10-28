@@ -35,7 +35,7 @@ const Index: React.FC = () => {
               <p className="text-gray-500">
                 Tell our chatbot about your needs, and we'll build a tailored AI agent for you.
               </p>
-              <Link to "/create-agent" 
+              <Link to="/create-agent" 
                 className="mt-6 inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                 Get Started →
               </Link>
@@ -57,7 +57,7 @@ const Index: React.FC = () => {
               <p className="text-gray-500">
                 Chat with your AI agent to see how it responds before deploying.
               </p>
-              <Link to "/test-agent" 
+              <Link to="/test-agent" 
                 className="mt-6 inline-block px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
                 Test Agent →
               </Link>

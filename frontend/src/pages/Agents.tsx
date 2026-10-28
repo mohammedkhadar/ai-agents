@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAgent } from '../hooks/useAgent';
 import { useToast } from '../hooks/useToast';
 
@@ -69,7 +69,7 @@ const Agents: React.FC = () => {
             <p className="text-gray-500 mb-4">
               No agents yet. Create your first agent below.
             </p>
-            <Link to "/create-agent"
+            <Link to="/create-agent"
               className="inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
               Create Your First Agent
             </Link>

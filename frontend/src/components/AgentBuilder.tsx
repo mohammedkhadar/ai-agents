@@ -33,7 +33,7 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const navigate = useNavigate();
 
-  const steps = [
+  const stepLabels = [
     'Provide agent name',
     'Define agent description',
     'Specify agent purpose',
@@ -84,7 +84,7 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
     }));
   };
 
-  if (currentStep > steps.length) {
+  if (currentStep > stepLabels.length) {
     // Complete - send to onComplete
     onComplete({
       name: steps.name,
@@ -104,14 +104,14 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
         {/* Step Progress */}
         <div className="mb-6">
           <nav className="flex space-x-2">
-            {steps.map((step, index) => (
+            {stepLabels.map((step, index) => (
               <div key={index} className={`flex-1 rounded px-3 py-2 ${index + 1 < currentStep ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
                 {step}
               </div>
             ))}
           </nav>
           <p className="mt-2 text-sm text-gray-500">
-            Step {currentStep} of {steps.length}
+            Step {currentStep} of {stepLabels.length}
           </p>
         </div>
 
