@@ -1,8 +1,9 @@
 import { setCors, signSession, publicUser } from '../_lib/session.js';
 
 // GitHub OAuth code exchange + user profile fetch, then issues a session.
-// POST { code, redirectUri }
-// Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET env vars.
+// POST { code, redirectUri, clientId }
+// Requires GITHUB_CLIENT_SECRET env var. Client ID may come from env
+// or the request body (it is public and may be inlined at build time).
 
 export default async function handler(req, res) {
   if (setCors(req, res)) return;
@@ -11,8 +12,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+  // Client ID is public — accept from env var OR request body
+  const clientId = process.env.GITHUB_CLIENT_ID || req.body?.clientId;
   if (!clientId || !clientSecret) {
     return res.status(501).json({
       message: 'GitHub sign-in is not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.',
@@ -46,7 +48,7 @@ export default async function handler(req, res) {
     }
 
     const headers = {
-      Authorization: `Bearer ${tokenData.access_token}`,
+      Authorization: 'Bearer ' + tokenData.access_token,
       Accept: 'application/vnd.github+json',
       'User-Agent': 'ai-agent-platform',
     };

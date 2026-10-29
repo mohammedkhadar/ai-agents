@@ -1,18 +1,17 @@
 import { setCors } from '../_lib/session.js';
 
-// Returns which SSO providers are configured (client IDs are public).
-// The frontend uses this to decide which sign-in buttons to enable.
+// Returns the live SSO configuration.
+// Client IDs are public and inlined at build time via Vite (VITE_ prefix),
+// so the frontend already has them. This endpoint only reports whether
+// server-side secrets (GITHUB_CLIENT_SECRET, AUTH_SECRET) are available.
 
 export default function handler(req, res) {
   if (setCors(req, res)) return;
 
   res.status(200).json({
-    google: process.env.GOOGLE_CLIENT_ID || null,
-    github: process.env.GITHUB_CLIENT_ID || null,
-    _debug: {
-      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || null,
-      GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || null,
-      AUTH_SECRET: process.env.AUTH_SECRET || null,
-    },
+    google: process.env.GOOGLE_CLIENT_ID || '',
+    github: process.env.GITHUB_CLIENT_ID || '',
+    hasGithubSecret: !!process.env.GITHUB_CLIENT_SECRET,
+    hasAuthSecret: !!process.env.AUTH_SECRET,
   });
 }
