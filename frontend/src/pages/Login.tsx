@@ -120,7 +120,7 @@ const Login: React.FC = () => {
                   type="button"
                   disabled
                   className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed"
-                  title="Set GOOGLE_CLIENT_ID to enable"
+                  title="Set VITE_GOOGLE_CLIENT_ID to enable"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/>
@@ -143,7 +143,7 @@ const Login: React.FC = () => {
                   ? 'bg-gray-900 text-white hover:bg-gray-800'
                   : 'border border-gray-300 text-gray-400 cursor-not-allowed'
               }`}
-              title={ssoConfig?.github ? undefined : 'Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable'}
+              title={ssoConfig?.github ? undefined : 'Set VITE_GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable'}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
@@ -172,13 +172,16 @@ const Login: React.FC = () => {
               </summary>
               <ol className="mt-3 space-y-2 list-decimal list-outside ml-4">
                 <li>
-                  <strong>Google:</strong> In <a className="underline" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Console → Credentials</a>, create an <em>OAuth client ID (Web)</em> with Authorized JavaScript origin <code className="bg-gray-100 px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}</code>, then set the Vercel env var <code className="bg-gray-100 px-1 rounded">GOOGLE_CLIENT_ID</code>.
+                  <strong>Google:</strong> In <a className="underline" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Console → Credentials</a>, create an <em>OAuth client ID (Web)</em> with Authorized JavaScript origin <code className="bg-gray-100 px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}</code>, then set the Vercel env var <code className="bg-gray-100 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> (the `VITE_` prefix lets Vite inline it at build time — no runtime env var propagation needed).
                 </li>
                 <li>
-                  <strong>GitHub:</strong> In <a className="underline" href="https://github.com/settings/developers" target="_blank" rel="noopener noreferrer">GitHub → Developer settings → OAuth Apps</a>, create an app with callback URL <code className="bg-gray-100 px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}/login</code>, then set Vercel env vars <code className="bg-gray-100 px-1 rounded">GITHUB_CLIENT_ID</code> and <code className="bg-gray-100 px-1 rounded">GITHUB_CLIENT_SECRET</code>.
+                  <strong>GitHub:</strong> In <a className="underline" href="https://github.com/settings/developers" target="_blank" rel="noopener noreferrer">GitHub → Developer settings → OAuth Apps</a>, create an app with callback URL <code className="bg-gray-100 px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}/login</code>, then set Vercel env vars <code className="bg-gray-100 px-1 rounded">VITE_GITHUB_CLIENT_ID</code> and <code className="bg-gray-100 px-1 rounded">GITHUB_CLIENT_SECRET</code> (the secret is server-side only).
                 </li>
                 <li>
-                  Redeploy (or restart) the Vercel project so the env vars take effect.
+                  Also set <code className="bg-gray-100 px-1 rounded">AUTH_SECRET</code> (generate with <code className="bg-gray-100 px-1 rounded">openssl rand -hex 32</code>) for signed session tokens.
+                </li>
+                <li>
+                  Redeploy the Vercel project (Redeploy → uncheck "Use existing build cache") so the env vars take effect.
                 </li>
               </ol>
             </details>
