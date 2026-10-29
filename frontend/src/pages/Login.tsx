@@ -152,17 +152,7 @@ const Login: React.FC = () => {
               {busy === 'github' ? 'Signing in with GitHub…' : 'Continue with GitHub'}
             </button>
 
-            {anySso && <div className="flex items-center gap-3 my-2"><div className="flex-1 h-px bg-gray-200" /><span className="text-xs text-gray-400">or</span><div className="flex-1 h-px bg-gray-200" /></div>}
-
-            {/* Guest */}
-            <button
-              type="button"
-              onClick={() => { continueAsGuest(); done(); }}
-              disabled={busy !== null}
-              className="w-full rounded-lg px-4 py-2.5 text-sm font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
-            >
-              Continue as Guest (this device only)
-            </button>
+            {anySso && <div className="flex items-center gap-3 my-2"><div className="flex-1 h-px bg-gray-200" /></div>}
           </div>
 
           {!anySso && (
@@ -185,7 +175,7 @@ const Login: React.FC = () => {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          Guest mode stores agents in this browser only. Sign in to keep them tied to your account.
+          Sign in to save and manage your AI agents across devices.
         </p>
       </div>
     </div>
