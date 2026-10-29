@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { SSO_CONFIG } from '../lib/ssoConfig';
 
 const Login: React.FC = () => {
-  const { ssoConfig, signInWithGoogleCredential, buildGitHubAuthorizeUrl, completeGitHubSignIn, continueAsGuest } = useAuth();
+  const { ssoConfig, signInWithGoogleCredential, buildGitHubAuthorizeUrl, completeGitHubSignIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState('');
