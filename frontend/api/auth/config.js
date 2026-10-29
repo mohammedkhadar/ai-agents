@@ -9,5 +9,10 @@ export default function handler(req, res) {
   res.status(200).json({
     google: process.env.GOOGLE_CLIENT_ID || null,
     github: process.env.GITHUB_CLIENT_ID || null,
+    _debug: {
+      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || null,
+      GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || null,
+      AUTH_SECRET: process.env.AUTH_SECRET || null,
+    },
   });
 }
