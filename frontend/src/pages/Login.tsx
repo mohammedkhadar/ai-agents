@@ -106,7 +106,7 @@ const Login: React.FC = () => {
           <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl mx-auto mb-4">
             AI
           </div>
-          <h1 className="text-2xl font-extrabold text-gray-900">Sign in to AI Agent Platform</h1>
+          <h1 className="text-2xl font-extrabold text-gray-900">Sign in to Opus Agents</h1>
           <p className="text-gray-500 mt-2 text-sm">
             Create, test and deploy AI agents with your own account.
           </p>
