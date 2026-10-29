@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
+import Navbar from '../components/Navbar';
 
 const Agents: React.FC = () => {
-  const { showToast } = useToast();
+  const { toasts, showToast } = useToast();
   const navigate = useNavigate();
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +25,14 @@ const Agents: React.FC = () => {
       })
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          setAgents(data);
+          // Merge remote and local agents without duplicates
+          const merged = [...localAgents];
+          for (const remote of data) {
+            if (!merged.some(a => a._id === remote._id)) {
+              merged.push(remote);
+            }
+          }
+          setAgents(merged);
         } else {
           setAgents(localAgents);
         }
@@ -34,7 +42,7 @@ const Agents: React.FC = () => {
         setAgents(localAgents);
         setLoading(false);
       });
-  }, [showToast]);
+  }, []);
 
   const deleteAgent = async (id: string) => {
     if (!confirm('Are you sure you want to delete this agent?')) return;
@@ -56,40 +64,49 @@ const Agents: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="text-gray-500">Loading agents...</span>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center py-24">
+          <span className="text-gray-500">Loading agents...</span>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto p-6">
-        <nav className="mb-6 flex items-center justify-between">
-          <ol className="list-reset space-y-1">
-            <li className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path className="w-5 h-5" d="M12 19l9 2v-1l-9-2zm0 0l9 2v-1l-9-2zm0 0l-9-2v1l9-2zm0 0l-9 2v1l9 2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-9-2h9m-5 0H5m3 5H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2zm3.29-4.29L19.71 5H5v2.71l8.59 3.14L23 9.71V5a2 2 0 0 0-2-2h-1.29l1.76 1.76l1.41-1.41z" />
-              </svg>
-              <span>Your agents</span>
-            </li>
-          </ol>
+      <Navbar />
+      <div className="max-w-3xl mx-auto p-6">
+        {toasts.length > 0 && (
+          <div className="fixed bottom-4 right-4 z-50 space-y-2">
+            {toasts.map(t => (
+              <div
+                key={t.id}
+                className="px-4 py-3 rounded-lg shadow-lg text-sm font-medium bg-gray-900 text-white"
+              >
+                <div className="font-bold">{t.title}</div>
+                {t.description && <div>{t.description}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-extrabold text-gray-900">
+            My Agents
+          </h1>
           <Link
             to="/create-agent"
             className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
           >
-            + Create Agent
+            + Create New Agent
           </Link>
-        </nav>
-
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-6">
-          My Agents
-        </h1>
+        </div>
 
         {agents.length === 0 && (
-          <div className="bg-white rounded-lg p-8 text-center shadow">
+          <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-gray-100">
             <p className="text-gray-500 mb-4">
-              No agents yet. Create your first agent below.
+              No agents yet. Create your first AI agent below.
             </p>
             <Link
               to="/create-agent"
@@ -104,7 +121,7 @@ const Agents: React.FC = () => {
           {agents.map((agent) => (
             <div
               key={agent._id}
-              className="bg-white rounded-lg p-6 shadow transition-shadow hover:shadow-lg"
+              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 transition-shadow hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -113,35 +130,42 @@ const Agents: React.FC = () => {
                       {agent.name}
                     </h2>
                     {agent.status && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        agent.status === 'deployed'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}>
+                      <span
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                          agent.status === 'deployed'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
                         {agent.status}
                       </span>
                     )}
                   </div>
-                  <p className="text-gray-500 text-sm mt-1">
+                  <p className="text-gray-600 text-sm mt-1">
                     {agent.description}
                   </p>
+                  {agent.purpose && (
+                    <p className="text-gray-400 text-xs mt-1">
+                      Purpose: {agent.purpose}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => navigate(`/test-agent/${agent._id}`)}
-                    className="text-indigo-600 text-sm font-medium hover:text-indigo-800 transition-colors"
+                    className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
                   >
-                    Test
+                    Chat / Test
                   </button>
                   <button
                     onClick={() => navigate(`/agent/${agent._id}`)}
-                    className="text-green-600 text-sm font-medium hover:text-green-800 transition-colors"
+                    className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                   >
-                    View
+                    Details
                   </button>
                   <button
                     onClick={() => deleteAgent(agent._id)}
-                    className="text-red-500 text-sm font-medium hover:text-red-700 transition-colors"
+                    className="px-3 py-1.5 text-red-500 text-sm font-medium hover:bg-red-50 rounded-lg transition-colors"
                   >
                     Delete
                   </button>

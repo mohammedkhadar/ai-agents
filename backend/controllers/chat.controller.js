@@ -5,34 +5,95 @@ const generateSessionId = () => {
   return 'session-' + Math.random().toString(36).slice(2, 11);
 };
 
-export const sendMessage = (req, res) => {
+const buildSystemPrompt = (agent) => {
+  if (!agent) {
+    return 'You are a helpful, knowledgeable AI assistant. Provide clear, accurate, and concise responses.';
+  }
+  const caps = Array.isArray(agent.capabilities) && agent.capabilities.length > 0
+    ? agent.capabilities.join(', ')
+    : 'general assistance';
+  return [
+    `You are "${agent.name || 'AI Assistant'}".`,
+    agent.description ? `Description: ${agent.description}` : '',
+    agent.purpose ? `Primary Purpose & Instructions: ${agent.purpose}` : '',
+    agent.industry ? `Industry / Domain: ${agent.industry}` : '',
+    `Enabled Capabilities: ${caps}.`,
+    'Stay in character, be genuinely helpful, and directly answer the user\'s request with specific, actionable information.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+};
+
+async function callLLM(messages) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+
+  if (apiKey) {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        messages,
+        temperature: 0.7,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const reply = data?.choices?.[0]?.message?.content;
+      if (reply) return reply;
+    }
+  }
+
+  const pollRes = await fetch('https://text.pollinations.ai/openai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'openai',
+      messages,
+      temperature: 0.7,
+    }),
+  });
+
+  if (pollRes.ok) {
+    const data = await pollRes.json();
+    const reply = data?.choices?.[0]?.message?.content;
+    if (reply) return reply;
+  }
+
+  throw new Error('LLM request failed');
+}
+
+export const sendMessage = async (req, res) => {
   try {
-    const { sessionId, message, agent } = req.body;
+    const { sessionId, message, history = [], agent } = req.body || {};
     const activeSessionId = sessionId || generateSessionId();
 
     if (!conversations[activeSessionId]) {
       conversations[activeSessionId] = [];
     }
-    conversations[activeSessionId].push({ role: 'user', content: message });
 
-    const lowerMessage = (message || '').toLowerCase();
-    const agentName = agent?.name || 'AI Assistant';
-    const purpose = agent?.purpose || agent?.description || 'helping users with their requests';
-    let response;
+    const priorMessages = Array.isArray(history) && history.length > 0
+      ? history.slice(-10).map(m => ({ role: m.role, content: m.content }))
+      : conversations[activeSessionId].slice(-10);
 
-    if (lowerMessage.includes('hotel') && lowerMessage.includes('hamburg')) {
-      response = `Here are 3 top hotel recommendations in Hamburg:\n1. Fairmont Hotel Vier Jahreszeiten — Luxury lakeside hotel on the Inner Alster.\n2. The Fontenay — Modern 5-star hotel in Rotherbaum with panoramic views.\n3. 25hours Hotel Hamburg HafenCity — Stylish boutique stay right in HafenCity.\n\nWould you like me to filter by budget or neighborhood?`;
-    } else if (lowerMessage.includes('hotel')) {
-      response = `As ${agentName}, I'd be happy to suggest hotels! Could you share your preferred city, budget, or travel dates?`;
-    } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
-      response = `Hello! I'm ${agentName}, configured for ${purpose}. How can I assist you today?`;
-    } else if (lowerMessage.includes('help') || lowerMessage.includes('what')) {
-      response = `I'm ${agentName}. My purpose is: ${purpose}. Ask me anything to test how I respond!`;
-    } else {
-      response = `[${agentName}] I received your message: "${message}". Based on my configuration (${purpose}), I'm ready to assist—let me know any specific details you'd like me to handle.`;
-    }
+    const llmMessages = [
+      { role: 'system', content: buildSystemPrompt(agent) },
+      ...priorMessages,
+      { role: 'user', content: String(message || '').trim() },
+    ];
 
-    conversations[activeSessionId].push({ role: 'assistant', content: response });
+    const response = await callLLM(llmMessages);
+
+    conversations[activeSessionId] = [
+      ...priorMessages,
+      { role: 'user', content: String(message || '').trim() },
+      { role: 'assistant', content: response },
+    ];
+
     res.json({ sessionId: activeSessionId, response });
   } catch (error) {
     res.status(500).json({ message: error.message });

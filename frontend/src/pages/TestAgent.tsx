@@ -1,53 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAgent } from '../hooks/useAgent';
 import { useToast } from '../hooks/useToast';
+import Navbar from '../components/Navbar';
 
-const generateSmartFallbackResponse = (message: string, agent: any): string => {
-  const lower = message.toLowerCase();
-  const agentName = agent?.name || 'AI Assistant';
-  const purpose = agent?.purpose || agent?.description || 'helping you with your requests';
-
-  if (lower.includes('hotel') && lower.includes('hamburg')) {
-    return `Here are 3 top hotel recommendations in Hamburg:\n1. Fairmont Hotel Vier Jahreszeiten — Luxury lakeside hotel on the Inner Alster.\n2. The Fontenay — Modern 5-star hotel in Rotherbaum with panoramic views.\n3. 25hours Hotel Hamburg HafenCity — Stylish, boutique stay right in HafenCity.\n\nWould you like me to filter by budget or neighborhood?`;
+const buildSystemPrompt = (agent: any) => {
+  if (!agent) {
+    return 'You are a helpful, knowledgeable AI assistant. Provide clear, accurate, and concise responses.';
   }
-  if (lower.includes('hotel')) {
-    return `As ${agentName}, I'd be happy to suggest hotels! Could you share your preferred budget, travel dates, or neighborhood so I can narrow down the best options?`;
-  }
-  if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
-    return `Hello! I'm ${agentName}, configured for ${purpose}. How can I assist you today?`;
-  }
-  if (lower.includes('help') || lower.includes('what can you do')) {
-    const caps = agent?.capabilities?.length ? agent.capabilities.join(', ') : 'answering questions and assisting users';
-    return `I'm ${agentName}. My purpose is: ${purpose}. Enabled capabilities: ${caps}. Ask me anything to test how I respond!`;
-  }
-  return `[${agentName}] I received your message: "${message}". Based on my purpose (${purpose}), here is how I can help: please let me know any specific details or constraints you'd like me to apply.`;
+  const caps = Array.isArray(agent.capabilities) && agent.capabilities.length > 0
+    ? agent.capabilities.join(', ')
+    : 'general assistance';
+  return [
+    `You are "${agent.name || 'AI Assistant'}".`,
+    agent.description ? `Description: ${agent.description}` : '',
+    agent.purpose ? `Primary Purpose & Instructions: ${agent.purpose}` : '',
+    agent.industry ? `Industry / Domain: ${agent.industry}` : '',
+    `Enabled Capabilities: ${caps}.`,
+    'Stay in character, be genuinely helpful, and directly answer the user\'s request with specific, actionable information.',
+  ]
+    .filter(Boolean)
+    .join('\n');
 };
 
 const TestAgent: React.FC = () => {
   const { id: agentId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const { sessionId } = useAgent(agentId);
   const navigate = useNavigate();
   const [agent, setAgent] = useState<any>(null);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
-  const [deployedBanner, setDeployedBanner] = useState(false);
-  const { showToast } = useToast();
+  const [shareUrl, setShareUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+  const { toasts, showToast } = useToast();
 
   useEffect(() => {
+    // 1. Check URL ?cfg= parameter (for shared links)
+    const cfgParam = searchParams.get('cfg');
+    let decodedCfg: any = null;
+    if (cfgParam) {
+      try {
+        decodedCfg = JSON.parse(decodeURIComponent(atob(cfgParam)));
+      } catch {
+        // ignore invalid cfg param
+      }
+    }
+
+    // 2. Check localStorage
     try {
       const savedAgents = JSON.parse(localStorage.getItem('ai_agents') || '[]');
       const found = agentId
         ? savedAgents.find((a: any) => a._id === agentId)
         : JSON.parse(localStorage.getItem('active_agent') || 'null');
+
       if (found) {
         setAgent(found);
+      } else if (decodedCfg) {
+        const reconstructed = {
+          _id: agentId || 'shared-agent',
+          ...decodedCfg,
+          status: 'deployed',
+          createdAt: new Date().toISOString(),
+        };
+        setAgent(reconstructed);
       }
     } catch {
-      // ignore
+      if (decodedCfg) {
+        setAgent({ _id: agentId || 'shared-agent', ...decodedCfg });
+      }
     }
-  }, [agentId]);
+  }, [agentId, searchParams]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,129 +79,238 @@ const TestAgent: React.FC = () => {
     if (!trimmed || isRunning) return;
 
     const userMessage = { role: 'user', content: trimmed };
-    setMessages(prev => [...prev, userMessage]);
+    const updatedHistory = [...messages, userMessage];
+    setMessages(updatedHistory);
     setInput('');
     setIsRunning(true);
 
     try {
-      const response = await fetch('/api/chat/message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, message: trimmed, agent }),
-      });
+      let replyText = '';
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      // 1. Call serverless backend API (/api/chat/message)
+      try {
+        const response = await fetch('/api/chat/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            message: trimmed,
+            history: messages.slice(-10),
+            agent,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.response) {
+            replyText = data.response;
+          }
+        }
+      } catch {
+        // Backend unreachable; fall through to direct LLM call
       }
 
-      const data = await response.json();
+      // 2. Direct real LLM call if serverless route wasn't available
+      if (!replyText) {
+        const llmRes = await fetch('https://text.pollinations.ai/openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'openai',
+            messages: [
+              { role: 'system', content: buildSystemPrompt(agent) },
+              ...messages.slice(-10),
+              { role: 'user', content: trimmed },
+            ],
+            temperature: 0.7,
+          }),
+        });
 
-      if (data.response) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-      } else {
-        setMessages(prev => [
-          ...prev,
-          { role: 'assistant', content: generateSmartFallbackResponse(trimmed, agent) },
-        ]);
+        if (llmRes.ok) {
+          const llmData = await llmRes.json();
+          replyText = llmData?.choices?.[0]?.message?.content || '';
+        }
       }
 
-      if (data.agentReady) {
-        showToast('Agent Ready', 'Agent is ready for deployment!', 'success');
-        setTimeout(() => navigate('/agents'), 2000);
+      if (!replyText) {
+        throw new Error('Could not generate response');
       }
+
+      setMessages(prev => [...prev, { role: 'assistant', content: replyText }]);
     } catch {
-      // Fallback so testing works seamlessly even if /api/chat/message isn't reachable
-      const fallbackReply = generateSmartFallbackResponse(trimmed, agent);
-      setMessages(prev => [...prev, { role: 'assistant', content: fallbackReply }]);
+      showToast('Error', 'Error communicating with AI service. Please try again.', 'error');
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: 'Sorry, I encountered a temporary issue reaching the AI model. Please try sending your message again.' },
+      ]);
     } finally {
       setIsRunning(false);
     }
   };
 
   const handleDeploy = () => {
+    const active = agent || {
+      _id: agentId || 'agent-' + Math.random().toString(36).slice(2, 10),
+      name: 'General AI Assistant',
+      description: 'Helpful conversational AI agent',
+      purpose: 'Answer user questions accurately and helpfully',
+      industry: 'customer-service',
+      capabilities: ['text-generation'],
+      createdAt: new Date().toISOString(),
+    };
+
+    const deployedAgent = { ...active, status: 'deployed' };
+    setAgent(deployedAgent);
+
     try {
       const savedAgents = JSON.parse(localStorage.getItem('ai_agents') || '[]');
-      if (agent) {
-        const updated = savedAgents.map((a: any) =>
-          a._id === agent._id ? { ...a, status: 'deployed' } : a
-        );
-        if (!savedAgents.some((a: any) => a._id === agent._id)) {
-          updated.unshift({ ...agent, status: 'deployed' });
-        }
-        localStorage.setItem('ai_agents', JSON.stringify(updated));
-      }
+      const exists = savedAgents.some((a: any) => a._id === deployedAgent._id);
+      const updated = exists
+        ? savedAgents.map((a: any) => (a._id === deployedAgent._id ? deployedAgent : a))
+        : [deployedAgent, ...savedAgents];
+      localStorage.setItem('ai_agents', JSON.stringify(updated));
+      localStorage.setItem('active_agent', JSON.stringify(deployedAgent));
     } catch {
       // ignore
     }
-    setDeployedBanner(true);
-    setTimeout(() => navigate('/agents'), 1200);
+
+    const encoded = btoa(
+      encodeURIComponent(
+        JSON.stringify({
+          name: deployedAgent.name,
+          description: deployedAgent.description,
+          purpose: deployedAgent.purpose,
+          industry: deployedAgent.industry,
+          capabilities: deployedAgent.capabilities,
+        })
+      )
+    );
+    const url = `${window.location.origin}/test-agent/${deployedAgent._id}?cfg=${encoded}`;
+    setShareUrl(url);
+    showToast('Agent Deployed!', 'Your agent is live and ready to share.', 'success');
+  };
+
+  const copyShareUrl = () => {
+    if (!shareUrl) return;
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar />
       <div className="max-w-3xl mx-auto p-6">
-        <nav className="mb-6">
-          <ol className="list-reset space-y-1">
-            <li className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path className="w-5 h-5" d="M12 19l9 2v-1l-9-2zm0 0l9 2v-1l-9-2zm0 0l-9-2v1l9-2zm0 0l-9 2v1l9 2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-9-2h9m-5 0H5m3 5H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2zm3.29-4.29L19.71 5H5v2.71l8.59 3.14L23 9.71V5a2 2 0 0 0-2-2h-1.29l1.76 1.76l1.41-1.41z" />
-              </svg>
-              <span>Test your agent</span>
-            </li>
-          </ol>
-        </nav>
+        {/* Toast Banner */}
+        {toasts.length > 0 && (
+          <div className="fixed bottom-4 right-4 z-50 space-y-2">
+            {toasts.map(t => (
+              <div
+                key={t.id}
+                className={`px-4 py-3 rounded-lg shadow-lg text-sm font-medium ${
+                  t.variant === 'error'
+                    ? 'bg-red-600 text-white'
+                    : t.variant === 'success'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-900 text-white'
+                }`}
+              >
+                <div className="font-bold">{t.title}</div>
+                {t.description && <div>{t.description}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            <span>Live Agent Playground</span>
+          </div>
+          {agent?.status && (
+            <span
+              className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                agent.status === 'deployed'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-amber-100 text-amber-700'
+              }`}
+            >
+              {agent.status === 'deployed' ? '● Deployed' : '● Testing'}
+            </span>
+          )}
+        </div>
 
         <h1 className="text-3xl font-extrabold text-gray-900 mb-6">
-          Test {agent?.name ? agent.name : agentId ? 'Your Agent' : 'New Agent'}
+          {agent?.name ? `Chat with ${agent.name}` : 'Test Your AI Agent'}
         </h1>
 
-        {deployedBanner && (
-          <div className="mb-6 p-4 rounded-lg bg-green-100 text-green-800 font-medium">
-            Agent deployed successfully! Redirecting to My Agents...
+        {shareUrl && (
+          <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-200 text-green-900">
+            <div className="font-bold mb-1">Agent Deployed! Shareable Live Link:</div>
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                readOnly
+                value={shareUrl}
+                className="flex-1 text-xs bg-white border border-green-300 rounded px-3 py-2 text-gray-700"
+              />
+              <button
+                type="button"
+                onClick={copyShareUrl}
+                className="px-3 py-2 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors"
+              >
+                {copied ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
           </div>
         )}
 
         {/* Agent configuration summary */}
-        <div className="bg-white rounded-lg p-4 mb-6 shadow">
+        <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-100">
           {agent ? (
             <div className="text-sm text-gray-700 space-y-1">
               <p><strong>Name:</strong> {agent.name}</p>
-              <p><strong>Description:</strong> {agent.description}</p>
+              {agent.description && <p><strong>Description:</strong> {agent.description}</p>}
               {agent.purpose && <p><strong>Purpose:</strong> {agent.purpose}</p>}
               {agent.industry && <p><strong>Industry:</strong> {agent.industry}</p>}
             </div>
           ) : (
             <p className="text-gray-600 text-sm">
-              {sessionId ? `Session: ${sessionId.substring(0, 8)}...` : 'No active session'}
+              Testing general AI assistant ({sessionId ? `Session: ${sessionId.substring(0, 8)}...` : 'Ready'})
             </p>
           )}
         </div>
 
         {/* Chat Messages */}
-        <div className="bg-white rounded-lg p-4 mb-6 shadow-md min-h-[200px]" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+        <div className="bg-white rounded-xl p-4 mb-6 shadow-md min-h-[260px]" style={{ maxHeight: '500px', overflowY: 'auto' }}>
           {messages.length === 0 && (
-            <p className="text-gray-400 text-sm text-center py-8">
-              Send a message below to test your agent.
+            <p className="text-gray-400 text-sm text-center py-12">
+              Send a message below to chat with your AI agent in real time.
             </p>
           )}
           {messages.map((msg, index) => (
-            <div key={index} className="mb-3">
-              <p
+            <div
+              key={index}
+              className={`mb-3 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
                 className={
                   msg.role === 'user'
-                    ? 'bg-blue-100 text-blue-800 rounded px-3 py-2 max-w-md whitespace-pre-line'
-                    : 'bg-gray-200 text-gray-800 rounded px-3 py-2 max-w-md ml-auto whitespace-pre-line'
+                    ? 'bg-indigo-600 text-white rounded-2xl rounded-br-sm px-4 py-2.5 max-w-lg whitespace-pre-line text-sm'
+                    : 'bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-lg whitespace-pre-line text-sm'
                 }
               >
                 {msg.content}
-              </p>
+              </div>
             </div>
           ))}
 
-          {/* Loading state */}
           {isRunning && (
-            <div className="p-3 text-right">
-              <span className="text-sm text-gray-500">Agent is thinking...</span>
+            <div className="p-2 text-left">
+              <span className="inline-block bg-gray-100 text-gray-500 text-sm px-4 py-2 rounded-2xl animate-pulse">
+                Agent is thinking...
+              </span>
             </div>
           )}
         </div>
@@ -195,33 +328,33 @@ const TestAgent: React.FC = () => {
             }}
             placeholder="Type a message to test your agent..."
             rows={1}
-            className="flex-1 border rounded-l-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             disabled={isRunning}
           ></textarea>
           <button
             type="submit"
-            disabled={isRunning}
-            className="border rounded-r-lg px-5 py-3 bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+            disabled={isRunning || !input.trim()}
+            className="rounded-lg px-6 py-3 bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
           >
             Send
           </button>
         </form>
 
         {/* Action buttons */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
+        <div className="mt-6 pt-6 border-t border-gray-200 flex items-center justify-between">
           <button
             type="button"
             onClick={() => navigate('/agents')}
-            className="mr-3 px-6 py-3 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+            className="px-5 py-2.5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors"
           >
-            Back to Agents
+            ← Back to My Agents
           </button>
           <button
             type="button"
             onClick={handleDeploy}
-            className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+            className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
           >
-            Deploy Agent
+            {agent?.status === 'deployed' ? 'Get Share Link' : 'Deploy Agent'}
           </button>
         </div>
       </div>
