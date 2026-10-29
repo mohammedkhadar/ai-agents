@@ -233,6 +233,17 @@ const CreateAgent: React.FC = () => {
                 Test your agent with live AI responses before deploying
               </p>
             </div>
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center mb-3">
+                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.258v11.484M9 12l3 3 3-3" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Knowledge Base</h3>
+              <p className="text-gray-500 text-sm">
+                Upload business docs &amp; website URLs so agents answer from your content
+              </p>
+            </div>
           </div>
         </div>
       </div>
