@@ -1,13 +1,15 @@
 import React from 'react';
 
 // Lightweight, dependency-free Markdown renderer for chat bubbles.
-// Supports: headings (#, ##, ###), bold (**), italic (*), inline code (`),
-// unordered lists (-, *), ordered lists (1.), tables (| ... |), links, and paragraphs.
+// Supports: headings (#..###), bold (**), italic (*), inline code (`),
+// unordered lists (-, *), ordered lists (1.), tables (| ... |), links, paragraphs.
+// IMPORTANT: the parse loop must ALWAYS consume at least one line per iteration —
+// a non-progressing iteration freezes React (page hang). Guarded below.
 
 const inlineMd = (text: string): React.ReactNode[] => {
   const nodes: React.ReactNode[] = [];
-  // Order matters: code > bold > italic > links
-  const regex = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\[[^\]]+\]\((https?:\/\/[^)]+)\))/g;
+  // Order matters: code > bold > link > italic
+  const regex = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[[^\]]+\]\((?:https?:\/\/)[^)]+\))|(\*[^*\n]+\*)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
@@ -50,23 +52,31 @@ interface MarkdownProps {
 }
 
 const Markdown: React.FC<MarkdownProps> = ({ content }) => {
-  const lines = content.split('\n');
+  const lines = (content || '').split('\n');
   const blocks: React.ReactNode[] = [];
   let i = 0;
   let key = 0;
 
   const isTableRow = (line: string) => /^\s*\|.*\|\s*$/.test(line);
-  const isSeparatorRow = (line: string) => /^\s*\|[\s:|-]+\|\s*$/.test(line);
+  // Accepts both "| --- | --- |" and "--- | ---" separator styles
+  const isSeparatorRow = (line: string) =>
+    line.includes('-') && /^[\s|:-]+$/.test(line);
   const parseRow = (line: string) =>
-    line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+    line
+      .trim()
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map(c => c.trim());
 
   while (i < lines.length) {
     const line = lines[i];
+    const startIdx = i; // guard: every branch must advance past startIdx
 
-    // Tables
+    // Well-formed table: header row + separator row (+ body rows)
     if (isTableRow(line) && i + 1 < lines.length && isSeparatorRow(lines[i + 1])) {
       const headers = parseRow(line);
-      i += 2; // skip header + separator
+      i += 2;
       const rows: string[][] = [];
       while (i < lines.length && isTableRow(lines[i])) {
         rows.push(parseRow(lines[i]));
@@ -98,27 +108,18 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
           </table>
         </div>
       );
-      continue;
-    }
-
-    // Headings
-    const headingMatch = /^(#{1,4})\s+(.*)$/.exec(line);
-    if (headingMatch) {
+    } else if (/^#{1,4}\s+/.test(line)) {
+      const headingMatch = /^(#{1,4})\s+(.*)$/.exec(line)!;
       const level = headingMatch[1].length;
-      const text = headingMatch[2];
       const cls =
         level === 1
           ? 'text-lg font-bold mt-3 mb-1.5'
           : level === 2
           ? 'text-base font-bold mt-3 mb-1.5'
           : 'text-sm font-bold mt-2.5 mb-1';
-      blocks.push(<div key={key++} className={cls}>{inlineMd(text)}</div>);
+      blocks.push(<div key={key++} className={cls}>{inlineMd(headingMatch[2])}</div>);
       i++;
-      continue;
-    }
-
-    // Unordered list
-    if (/^\s*[-*]\s+/.test(line)) {
+    } else if (/^\s*[-*]\s+/.test(line)) {
       const items: string[] = [];
       while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
         items.push(lines[i].replace(/^\s*[-*]\s+/, ''));
@@ -131,11 +132,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
           ))}
         </ul>
       );
-      continue;
-    }
-
-    // Ordered list
-    if (/^\s*\d+[.)]\s+/.test(line)) {
+    } else if (/^\s*\d+[.)]\s+/.test(line)) {
       const items: string[] = [];
       while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) {
         items.push(lines[i].replace(/^\s*\d+[.)]\s+/, ''));
@@ -148,33 +145,34 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
           ))}
         </ol>
       );
-      continue;
+    } else if (line.trim() === '') {
+      i++;
+    } else {
+      // Paragraph catch-all: consumes ANY non-blank line that didn't match above,
+      // including stray/malformed table rows (rendered as plain text).
+      const paraLines: string[] = [];
+      while (
+        i < lines.length &&
+        lines[i].trim() !== '' &&
+        !(isTableRow(lines[i]) && i + 1 < lines.length && isSeparatorRow(lines[i + 1])) &&
+        !/^#{1,4}\s+/.test(lines[i]) &&
+        !/^\s*[-*]\s+/.test(lines[i]) &&
+        !/^\s*\d+[.)]\s+/.test(lines[i])
+      ) {
+        paraLines.push(lines[i]);
+        i++;
+      }
+      blocks.push(
+        <p key={key++} className="my-1.5 leading-relaxed whitespace-pre-line">
+          {inlineMd(paraLines.join('\n'))}
+        </p>
+      );
     }
 
-    // Blank line
-    if (line.trim() === '') {
-      i++;
-      continue;
-    }
-
-    // Paragraph
-    const paraLines: string[] = [];
-    while (
-      i < lines.length &&
-      lines[i].trim() !== '' &&
-      !isTableRow(lines[i]) &&
-      !/^(#{1,4})\s+/.test(lines[i]) &&
-      !/^\s*[-*]\s+/.test(lines[i]) &&
-      !/^\s*\d+[.)]\s+/.test(lines[i])
-    ) {
-      paraLines.push(lines[i]);
+    // Hard safety guard: never allow a non-progressing iteration (prevents page freeze)
+    if (i === startIdx) {
       i++;
     }
-    blocks.push(
-      <p key={key++} className="my-1.5 leading-relaxed">
-        {inlineMd(paraLines.join('\n'))}
-      </p>
-    );
   }
 
   return <div className="markdown-body">{blocks}</div>;
