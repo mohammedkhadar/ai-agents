@@ -1,21 +1,11 @@
-import pdfParse from 'pdf-parse';
-import mammoth from 'mammoth';
-import { setCors } from '../_lib/session.js';
-import { getStoredToken, verifySession, publicUser } from '../_lib/session.js';
+// Document parsing uses dynamic imports so missing packages don't break the function.
+// PDF: pdf-parse (may need to load from lib path to avoid test side-effects)
+// DOCX: mammoth
+// HTML/URL: regex-based extraction (no deps)
 
-const MAX_TEXT = 20000;
+const MAX_TEXT = 30000;
 const CHUNK_SIZE = 500;
 const CHUNK_OVERLAP = 200;
-const SUPPORTED_TYPES = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'text/plain',
-  'text/csv',
-  'application/json',
-  'text/markdown',
-  'application/xml',
-  'text/html',
-];
 
 function chunkText(text) {
   const trimmed = text.trim();
@@ -48,25 +38,38 @@ function stripHtml(html) {
 async function parseBuffer(buffer, filename, mimeType) {
   const ext = (filename || '').split('.').pop().toLowerCase();
 
+  // Try PDF parsing
   if (ext === 'pdf' || mimeType === 'application/pdf') {
-    const data = await pdfParse(buffer);
-    return data.text || '';
+    try {
+      // Import from lib path to avoid pdf-parse's default test file side-effect
+      const mod = await import('pdf-parse/lib/pdf-parse.js');
+      const data = await mod.default(buffer);
+      return (data.text || '').slice(0, MAX_TEXT);
+    } catch (importErr) {
+      try {
+        const mod = await import('pdf-parse');
+        const data = await mod.default(buffer);
+        return (data.text || '').slice(0, MAX_TEXT);
+      } catch (e) {
+        console.error('PDF parse error:', e.message);
+        return '';
+      }
+    }
   }
 
-  if (ext === 'docx' || mimeType?.includes('wordprocessingml')) {
-    const result = await mammoth.extractRawText({ buffer });
-    return result.text || '';
+  // Try DOCX parsing
+  if (ext === 'docx' || (mimeType && mimeType.includes('wordprocessingml'))) {
+    try {
+      const mod = await import('mammoth');
+      const result = await mod.default.extractRawText({ buffer });
+      return (result.text || '').slice(0, MAX_TEXT);
+    } catch (e) {
+      console.error('DOCX parse error:', e.message);
+      return '';
+    }
   }
 
-  if (ext === 'csv' || mimeType === 'text/csv') {
-    return buffer.toString('utf8').slice(0, MAX_TEXT);
-  }
-
-  if (ext === 'json' || mimeType === 'application/json') {
-    return buffer.toString('utf8').slice(0, MAX_TEXT);
-  }
-
-  // txt, md, xml, html, or fallback to plain text
+  // TXT, CSV, JSON, MD — pure text
   return buffer.toString('utf8').slice(0, MAX_TEXT);
 }
 
@@ -82,7 +85,8 @@ async function fetchUrl(url) {
     return stripHtml(html);
   }
   const buffer = Buffer.from(await res.arrayBuffer());
-  return await parseBuffer(buffer, new URL(url).pathname.split('/').pop() || 'page', contentType);
+  const ext = new URL(url).pathname.split('.').pop() || '';
+  return await parseBuffer(buffer, 'page.' + ext, contentType);
 }
 
 async function generateEmbeddings(chunks, apiKey) {
@@ -100,7 +104,7 @@ async function generateEmbeddings(chunks, apiKey) {
         },
         body: JSON.stringify({
           model: 'text-embedding-3-small',
-          input: batch,
+          input: batch.map(c => c.text),
           dimensions: 256,
         }),
       });
@@ -121,20 +125,20 @@ async function generateEmbeddings(chunks, apiKey) {
 }
 
 export default async function handler(req, res) {
-  if (setCors(req, res)) return;
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
-    // Verify auth token (optional — allow if token present)
-    const token = getStoredToken(req);
-    let user = null;
-    if (token) {
-      const payload = verifySession(token);
-      user = payload ? publicUser(payload) : null;
-    }
-
     const body = req.body || {};
     const { agentId, filename, mimeType, file: base64Data, url } = body;
     if (!agentId) {
@@ -155,7 +159,7 @@ export default async function handler(req, res) {
       }
     } else if (base64Data && filename) {
       source = filename;
-      sourceType = SUPPORTED_TYPES.includes(mimeType) ? 'file' : 'file';
+      sourceType = 'file';
       const buffer = Buffer.from(base64Data, 'base64');
       try {
         text = await parseBuffer(buffer, filename, mimeType);
@@ -167,7 +171,7 @@ export default async function handler(req, res) {
     }
 
     if (!text || text.trim().length === 0) {
-      return res.status(400).json({ message: 'No text content could be extracted' });
+      return res.status(400).json({ message: 'No text content could be extracted. Try a different file format or URL.' });
     }
 
     const rawChunks = chunkText(text);
@@ -178,7 +182,6 @@ export default async function handler(req, res) {
       sourceType,
       filename: sourceType === 'file' ? filename : undefined,
       uploadedAt: new Date().toISOString(),
-      userId: user?.uid || null,
     }));
 
     const withEmbeddings = await generateEmbeddings(chunks, process.env.OPENAI_API_KEY);
