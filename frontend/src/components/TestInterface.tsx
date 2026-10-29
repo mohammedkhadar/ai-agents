@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { useAgent } from '../hooks/useAgent';
 
 interface TestInterfaceProps {
@@ -7,8 +6,7 @@ interface TestInterfaceProps {
 }
 
 const TestInterface: React.FC<TestInterfaceProps> = ({ agentId }) => {
-  const { sessionId, setSessionId } = useAgent(agentId);
-  const navigate = useNavigate();
+  const { sessionId } = useAgent(agentId);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
@@ -88,7 +86,6 @@ const TestInterface: React.FC<TestInterfaceProps> = ({ agentId }) => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a message to test your agent..."
             rows={1}
-            maxRows={3}
             className="flex-1 border rounded-l-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isRunning}
           ></textarea>

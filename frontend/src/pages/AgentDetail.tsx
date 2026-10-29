@@ -2,22 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAgent } from '../hooks/useAgent';
 import Navbar from '../components/Navbar';
+import { useAuth } from '../auth/AuthContext';
+import { loadUserAgents } from '../lib/storage';
 
 const AgentDetail: React.FC = () => {
   const { id: agentId } = useParams<{ id: string }>();
   const { sessionId } = useAgent(agentId);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const uid = user?.uid || 'guest';
   const [agent, setAgent] = useState<any>(null);
 
   useEffect(() => {
     try {
-      const savedAgents = JSON.parse(localStorage.getItem('ai_agents') || '[]');
-      const found = savedAgents.find((a: any) => a._id === agentId);
-      if (found) setAgent(found);
+      const savedAgents = loadUserAgents(uid);
+      setAgent(savedAgents.find((a: any) => a._id === agentId) || null);
     } catch {
       // ignore
     }
-  }, [agentId]);
+  }, [agentId, uid]);
 
   const goBack = () => navigate('/agents');
 

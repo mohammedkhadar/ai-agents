@@ -4,6 +4,8 @@ import { useAgent } from '../hooks/useAgent';
 import { useToast } from '../hooks/useToast';
 import Navbar from '../components/Navbar';
 import Markdown from '../components/Markdown';
+import { useAuth } from '../auth/AuthContext';
+import { loadUserAgents, getActiveAgent, saveUserAgents, setActiveAgent } from '../lib/storage';
 
 const buildSystemPrompt = (agent: any) => {
   if (!agent) {
@@ -29,6 +31,8 @@ const TestAgent: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { sessionId } = useAgent(agentId);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const uid = user?.uid || 'guest';
   const [agent, setAgent] = useState<any>(null);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState('');
@@ -49,12 +53,12 @@ const TestAgent: React.FC = () => {
       }
     }
 
-    // 2. Check localStorage
+    // 2. Check localStorage (scoped to the signed-in user)
     try {
-      const savedAgents = JSON.parse(localStorage.getItem('ai_agents') || '[]');
+      const savedAgents = loadUserAgents(uid);
       const found = agentId
         ? savedAgents.find((a: any) => a._id === agentId)
-        : JSON.parse(localStorage.getItem('active_agent') || 'null');
+        : getActiveAgent(uid);
 
       if (found) {
         setAgent(found);
@@ -72,7 +76,7 @@ const TestAgent: React.FC = () => {
         setAgent({ _id: agentId || 'shared-agent', ...decodedCfg });
       }
     }
-  }, [agentId, searchParams]);
+  }, [agentId, searchParams, uid]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,13 +168,13 @@ const TestAgent: React.FC = () => {
     setAgent(deployedAgent);
 
     try {
-      const savedAgents = JSON.parse(localStorage.getItem('ai_agents') || '[]');
+      const savedAgents = loadUserAgents(uid);
       const exists = savedAgents.some((a: any) => a._id === deployedAgent._id);
       const updated = exists
         ? savedAgents.map((a: any) => (a._id === deployedAgent._id ? deployedAgent : a))
         : [deployedAgent, ...savedAgents];
-      localStorage.setItem('ai_agents', JSON.stringify(updated));
-      localStorage.setItem('active_agent', JSON.stringify(deployedAgent));
+      saveUserAgents(uid, updated);
+      setActiveAgent(uid, deployedAgent);
     } catch {
       // ignore
     }

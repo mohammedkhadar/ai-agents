@@ -2,9 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AgentBuilder, { AgentConfig } from '../components/AgentBuilder';
 import Navbar from '../components/Navbar';
+import { useAuth } from '../auth/AuthContext';
+import { loadUserAgents, saveUserAgents, setActiveAgent, getStoredToken } from '../lib/storage';
 
 const CreateAgent: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const uid = user?.uid || 'guest';
   const [mode, setMode] = useState<'wizard' | 'chat'>('wizard');
   const [chatStep, setChatStep] = useState(0);
   const [chatInput, setChatInput] = useState('');
@@ -40,24 +44,28 @@ const CreateAgent: React.FC = () => {
     };
 
     try {
-      const existing = JSON.parse(localStorage.getItem('ai_agents') || '[]');
-      localStorage.setItem('ai_agents', JSON.stringify([newAgent, ...existing]));
-      localStorage.setItem('active_agent', JSON.stringify(newAgent));
+      const existing = loadUserAgents(uid);
+      saveUserAgents(uid, [newAgent, ...existing]);
+      setActiveAgent(uid, newAgent);
     } catch (e) {
       console.error('Failed to save agent to localStorage:', e);
     }
 
     try {
+      const token = getStoredToken();
       const res = await fetch('/api/agents', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(newAgent),
       });
       if (res.ok) {
         const saved = await res.json();
         if (saved && saved._id) {
           newAgent._id = saved._id;
-          localStorage.setItem('active_agent', JSON.stringify({ ...newAgent, ...saved }));
+          setActiveAgent(uid, { ...newAgent, ...saved });
         }
       }
     } catch {

@@ -2,21 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 import Navbar from '../components/Navbar';
+import { useAuth } from '../auth/AuthContext';
+import { loadUserAgents, saveUserAgents } from '../lib/storage';
 
 const Agents: React.FC = () => {
   const { toasts, showToast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const uid = user?.uid || 'guest';
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const localAgents = (() => {
-      try {
-        return JSON.parse(localStorage.getItem('ai_agents') || '[]');
-      } catch {
-        return [];
-      }
-    })();
+    const localAgents = loadUserAgents(uid);
 
     fetch('/api/agents')
       .then(res => {
@@ -54,11 +52,7 @@ const Agents: React.FC = () => {
     }
     const updated = agents.filter(agent => agent._id !== id);
     setAgents(updated);
-    try {
-      localStorage.setItem('ai_agents', JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
+    saveUserAgents(uid, updated);
     showToast('Deleted', 'Agent deleted successfully', 'success');
   };
 

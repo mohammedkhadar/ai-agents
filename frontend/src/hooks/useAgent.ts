@@ -1,10 +1,5 @@
 import { useState, useEffect } from 'react';
 
-interface AgentSession {
-  sessionId: string | null;
-  setSessionId: (id: string | null) => void;
-}
-
 export const useAgent = (agentId?: string) => {
   const [sessionId, setSessionId] = useState<string | null>(null);
 

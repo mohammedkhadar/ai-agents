@@ -77,6 +77,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ agentId, onAgentCreated }
       sendMessage(e);
     }
   };
+  void handleKeyDown;
 
   return (
     <div className="chat-interface min-h-screen bg-gray-50">
@@ -119,7 +120,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ agentId, onAgentCreated }
               onChange={(e) => setInput(e.target.value)}
               placeholder="Tell me about your AI agent needs..."
               rows={1}
-              maxRows={3}
               className="flex-1 border rounded-l-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={isLoading}
             ></textarea>
