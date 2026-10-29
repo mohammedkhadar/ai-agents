@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAgent } from '../hooks/useAgent';
 import { useToast } from '../hooks/useToast';
 import Navbar from '../components/Navbar';
+import Markdown from '../components/Markdown';
 
 const buildSystemPrompt = (agent: any) => {
   if (!agent) {
@@ -298,10 +299,10 @@ const TestAgent: React.FC = () => {
                 className={
                   msg.role === 'user'
                     ? 'bg-indigo-600 text-white rounded-2xl rounded-br-sm px-4 py-2.5 max-w-lg whitespace-pre-line text-sm'
-                    : 'bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-lg whitespace-pre-line text-sm'
+                    : 'bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-lg text-sm'
                 }
               >
-                {msg.content}
+                {msg.role === 'user' ? msg.content : <Markdown content={msg.content} />}
               </div>
             </div>
           ))}
