@@ -102,6 +102,7 @@ const TestAgent: React.FC = () => {
             message: trimmed,
             history: messages.slice(-10),
             agent,
+            knowledgeBases: agent?.knowledgeBases || agent?.config?.knowledgeBases || [],
           }),
         });
 
@@ -279,6 +280,9 @@ const TestAgent: React.FC = () => {
               {agent.description && <p><strong>Description:</strong> {agent.description}</p>}
               {agent.purpose && <p><strong>Purpose:</strong> {agent.purpose}</p>}
               {agent.industry && <p><strong>Industry:</strong> {agent.industry}</p>}
+              {(agent.knowledgeBases || agent?.config?.knowledgeBases || []).length > 0 && (
+                <p><strong>Knowledge Base:</strong> {(agent.knowledgeBases || agent?.config?.knowledgeBases || []).length} source(s) indexed</p>
+              )}
             </div>
           ) : (
             <p className="text-gray-600 text-sm">

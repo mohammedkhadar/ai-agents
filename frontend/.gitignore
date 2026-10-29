@@ -1,1 +1,5 @@
-frontend/dist/
+dist/
+node_modules/
+*.log
+.vercel
+.vercel_build_output

@@ -9,7 +9,7 @@ const Index: React.FC = () => {
       <div className="max-w-3xl mx-auto p-6 pt-12">
         <header className="text-center mb-12">
           <h1 className="text-4xl font-extrabold text-indigo-600 mb-4">
-            AI Agent Platform
+            Opus Agents
           </h1>
           <p className="text-lg text-gray-600">
             Create, test and deploy AI agents through natural conversation or step-by-step configuration.

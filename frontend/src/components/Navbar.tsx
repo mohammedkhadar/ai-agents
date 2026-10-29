@@ -20,7 +20,7 @@ const Navbar: React.FC = () => {
           <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
             AI
           </div>
-          <span className="font-bold text-gray-900 text-lg hidden sm:inline">AI Agent Platform</span>
+          <span className="font-bold text-gray-900 text-lg hidden sm:inline">Opus Agents</span>
         </Link>
 
         <div className="flex items-center gap-2">

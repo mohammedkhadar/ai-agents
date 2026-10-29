@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAgent } from '../hooks/useAgent';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../auth/AuthContext';
-import { loadUserAgents } from '../lib/storage';
+import { loadUserAgents, saveUserAgents } from '../lib/storage';
+import KnowledgeUploader from '../components/KnowledgeUploader';
 
 const AgentDetail: React.FC = () => {
   const { id: agentId } = useParams<{ id: string }>();
@@ -12,11 +13,16 @@ const AgentDetail: React.FC = () => {
   const { user } = useAuth();
   const uid = user?.uid || 'guest';
   const [agent, setAgent] = useState<any>(null);
+  const [knowledgeBases, setKnowledgeBases] = useState<any[]>([]);
 
   useEffect(() => {
     try {
       const savedAgents = loadUserAgents(uid);
-      setAgent(savedAgents.find((a: any) => a._id === agentId) || null);
+      const found = savedAgents.find((a: any) => a._id === agentId) || null;
+      setAgent(found);
+      if (found) {
+        setKnowledgeBases(found.knowledgeBases || found.config?.knowledgeBases || []);
+      }
     } catch {
       // ignore
     }
@@ -63,6 +69,38 @@ const AgentDetail: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Knowledge Base Management */}
+        {agent && (
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Business Knowledge Base</h2>
+            <p className="text-gray-500 text-sm mb-4">
+              Upload documents or add website URLs to teach your agent about your specific business.
+              The agent will use this content to answer questions accurately.
+            </p>
+            <KnowledgeUploader
+              agentId={agentId || ''}
+              existing={knowledgeBases}
+              onChange={(kbs) => {
+                setKnowledgeBases(kbs);
+                const updated = {
+                  ...agent,
+                  knowledgeBases: kbs,
+                  config: { ...agent.config, knowledgeBases: kbs },
+                };
+                setAgent(updated);
+                try {
+                  const all = loadUserAgents(uid);
+                  const idx = all.findIndex((a: any) => a._id === agentId);
+                  if (idx >= 0) {
+                    all[idx] = updated;
+                    saveUserAgents(uid, all);
+                  }
+                } catch { /* ignore */ }
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

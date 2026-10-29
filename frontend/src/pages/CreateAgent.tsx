@@ -34,10 +34,12 @@ const CreateAgent: React.FC = () => {
       purpose: agentConfig.purpose,
       industry: agentConfig.industry,
       capabilities: agentConfig.capabilities,
+      knowledgeBases: agentConfig.knowledgeBases || [],
       config: {
         model: agentConfig.model,
         temperature: agentConfig.temperature,
         systemPrompt: `You are ${agentConfig.name}. Description: ${agentConfig.description}. Purpose: ${agentConfig.purpose}. Industry: ${agentConfig.industry}.`,
+        knowledgeBases: agentConfig.knowledgeBases || [],
       },
       status: 'testing',
       createdAt: new Date().toISOString(),
@@ -78,6 +80,7 @@ const CreateAgent: React.FC = () => {
       purpose: newAgent.purpose,
       industry: newAgent.industry,
       capabilities: newAgent.capabilities,
+      knowledgeBases: newAgent.knowledgeBases || [],
     })));
     navigate(`/test-agent/${newAgent._id}?cfg=${encodedConfig}`);
   };

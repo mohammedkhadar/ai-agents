@@ -1,6 +1,5 @@
 // Per-user agent storage helpers (localStorage scoped by user id).
 // Falls back to a shared guest scope when no user is signed in.
-
 export type StoredAgent = {
   _id: string;
   name: string;
@@ -8,7 +7,8 @@ export type StoredAgent = {
   purpose?: string;
   industry?: string;
   capabilities?: string[];
-  config?: { model?: string; temperature?: number; systemPrompt?: string };
+  config?: { model?: string; temperature?: number; systemPrompt?: string; knowledgeBases?: any[] };
+  knowledgeBases?: any[];
   status?: string;
   createdAt: string;
 };

@@ -143,6 +143,11 @@ const Agents: React.FC = () => {
                       Purpose: {agent.purpose}
                     </p>
                   )}
+                  {(agent.knowledgeBases || agent?.config?.knowledgeBases || []).length > 0 && (
+                    <p className="text-xs text-indigo-600 mt-1">
+                      📚 {(agent.knowledgeBases || agent?.config?.knowledgeBases || []).length} knowledge source(s)
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <button

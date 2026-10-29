@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import KnowledgeUploader, { KnowledgeBase } from './KnowledgeUploader';
 
 export interface AgentConfig {
   name: string;
@@ -8,6 +9,7 @@ export interface AgentConfig {
   capabilities: string[];
   model: string;
   temperature: number;
+  knowledgeBases?: KnowledgeBase[];
 }
 
 interface AgentBuilderProps {
@@ -31,6 +33,7 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [error, setError] = useState('');
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
 
   const stepLabels = [
     'Provide agent name',
@@ -38,6 +41,7 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
     'Specify agent purpose',
     'Select industry',
     'Choose capabilities',
+    'Add knowledge base (optional)',
   ];
 
   const validateCurrentStep = (): boolean => {
@@ -72,6 +76,7 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
           return false;
         }
         break;
+      // Step 6 (knowledge base) is optional — no validation needed
     }
     setError('');
     return true;
@@ -89,6 +94,7 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
         capabilities: steps.capabilities.length > 0 ? steps.capabilities : ['text-generation'],
         model: 'gpt-3.5-turbo',
         temperature: 0.7,
+        knowledgeBases: knowledgeBases.length > 0 ? knowledgeBases : undefined,
       });
       return;
     }
@@ -107,6 +113,7 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
         capabilities: steps.capabilities.length > 0 ? steps.capabilities : ['text-generation'],
         model: 'gpt-3.5-turbo',
         temperature: 0.7,
+        knowledgeBases: knowledgeBases.length > 0 ? knowledgeBases : undefined,
       });
       return;
     }
@@ -392,6 +399,37 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
                 onClick={handleNext}
                 disabled={steps.capabilities.length === 0}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 6: Knowledge Base (optional) */}
+        {currentStep === 6 && (
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Knowledge Base</h2>
+            <p className="text-gray-600 mb-4">
+              Upload your business documents or website URLs so the agent can answer questions based on your specific content.
+            </p>
+            <KnowledgeUploader
+              agentId={steps.name || 'agent-' + Math.random().toString(36).slice(2, 10)}
+              existing={knowledgeBases}
+              onChange={setKnowledgeBases}
+            />
+            <div className="flex justify-end mt-6">
+              <button
+                type="button"
+                onClick={() => { setError(''); setCurrentStep(5); }}
+                className="mr-2 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
               >
                 Create Agent
               </button>
