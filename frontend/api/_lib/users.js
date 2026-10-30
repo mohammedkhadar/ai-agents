@@ -78,6 +78,7 @@ async function loadMongoose() {
 
 export async function findUserByEmail(email) {
   const Model = await loadMongoose();
+  console.log('[auth] findUserByEmail:', { hasModel: !!Model, hasConn: !!cachedConn, hasMongoUri: !!process.env.MONGODB_URI });
   if (!Model || !cachedConn) {
     return memoryUsers.find(u => u.email === email) || null;
   }
@@ -86,6 +87,7 @@ export async function findUserByEmail(email) {
 
 export async function createUser({ email, username, passwordHash }) {
   const Model = await loadMongoose();
+  console.log('[auth] createUser:', { hasModel: !!Model, hasConn: !!cachedConn, hasMongoUri: !!process.env.MONGODB_URI });
   if (!Model || !cachedConn) {
     const existing = memoryUsers.find(u => u.email === email);
     if (existing) throw new Error('Email already registered');
