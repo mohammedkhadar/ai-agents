@@ -159,14 +159,14 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
     <div className="agent-builder">
       {/* Step Progress */}
       <div className="mb-6">
-        <nav className="flex space-x-2">
+        <nav className="flex items-center gap-2 overflow-x-auto pb-1">
           {stepLabels.map((step, index) => {
             const isActive = index + 1 <= currentStep;
             const Icon = stepIcons[index];
             return (
               <div
                 key={index}
-                className={`flex items-center justify-center gap-1.5 flex-1 rounded px-3 py-2 text-sm font-medium ${
+                className={`flex-shrink-0 flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
                   isActive
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-600'
