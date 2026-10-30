@@ -22,6 +22,7 @@ interface AuthSsoConfig {
   hasGithubSecret: boolean;
   hasAuthSecret: boolean;
   emailPassword: boolean;
+  hasMongoUri: boolean;
 }
 
 interface AuthContextValue {
@@ -115,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           hasGithubSecret: cfg.hasGithubSecret || false,
           hasAuthSecret: cfg.hasAuthSecret || false,
           emailPassword: cfg.emailPassword !== false,
+          hasMongoUri: cfg.hasMongoUri || false,
         })
       )
       .catch(() =>
@@ -124,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           hasGithubSecret: false,
           hasAuthSecret: false,
           emailPassword: true,
+          hasMongoUri: false,
         })
       );
   }, []);
