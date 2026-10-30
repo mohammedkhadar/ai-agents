@@ -105,7 +105,7 @@ const Login: React.FC = () => {
 
   const hasGoogle = !!(ssoConfig?.google || SSO_CONFIG.googleClientId);
   const hasGithub = !!(ssoConfig?.github || SSO_CONFIG.githubClientId);
-  const hasEmailPassword = !!ssoConfig?.emailPassword;
+  const hasEmailPassword = true;
   const anySso = !!(hasGoogle || hasGithub);
 
   const GoogleIcon = () => (
@@ -251,9 +251,9 @@ const Login: React.FC = () => {
                   Back to SSO
                 </button>
               </div>
-              {!ssoConfig?.hasMongoUri && !isRegister && (
+              {!isRegister && (
                 <p className="text-xs text-amber-600 mt-2">
-                  ⚠️ Register first to create your account. For returning-user login, set MONGODB_URI in Vercel project settings.
+                  ⚠️ First time? Create an account above. For returning-user login, set MONGODB_URI in Vercel project settings and redeploy.
                 </p>
               )}
             </form>

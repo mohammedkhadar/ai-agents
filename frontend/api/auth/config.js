@@ -14,7 +14,5 @@ export default function handler(req, res) {
     hasGithubSecret: !!process.env.GITHUB_CLIENT_SECRET,
     hasAuthSecret: !!process.env.AUTH_SECRET,
     emailPassword: true,
-    hasMongoUri: !!process.env.MONGODB_URI,
-    _v: '2',
   });
 }
