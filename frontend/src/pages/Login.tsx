@@ -113,6 +113,7 @@ const Login: React.FC = () => {
     const token = params.get('token');
     if (token) {
       setResetToken(token);
+      setShowEmailForm(true);
       window.history.replaceState({}, '', '/login');
     }
   }, []);

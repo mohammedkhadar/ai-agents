@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       1 / 24  // 1 hour
     );
 
-    const resetLink = `https://www.opusagents.website/reset-password?token=${resetToken}`;
+    const resetLink = `https://www.opusagents.website/login?token=${resetToken}`;
 
     // Send email via Resend if API key is configured
     if (RESEND_API_KEY) {
