@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import connectDB from '../db/connect.js';
 import agentRoutes from '../routes/agent.routes.js';
 import chatRoutes from '../routes/chat.routes.js';
-import authRoutes from '../routes/auth.routes.js';
 
 dotenv.config();
 
@@ -19,7 +18,6 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', authRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/chat', chatRoutes);
 
