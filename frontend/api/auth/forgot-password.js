@@ -31,6 +31,18 @@ export default async function handler(req, res) {
       });
     }
 
+    let mongoUriPreview = 'set';
+    if (!mongoConn) {
+      try {
+        // Quick connection test to capture error
+        const { createRequire } = require('module');
+        const mongoose = createRequire(__filename)('mongoose');
+        await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+      } catch (e) {
+        mongoUriPreview = 'set-but-error: ' + e.message.slice(0, 200);
+      }
+    }
+
     // Generate a password reset token (valid for 1 hour)
     const resetToken = signToken(
       { email: normalizedEmail, purpose: 'password-reset' },
