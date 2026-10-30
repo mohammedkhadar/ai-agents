@@ -104,10 +104,10 @@ const Login: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-600 to-indigo-700 flex items-center justify-center mx-auto mb-4">
-            <Logo size="sm" />
-          </div>
-          <h1 className="text-2xl font-extrabold text-gray-900">Sign in to Opus Agents</h1>
+          <Logo size="lg" />
+          <h1 className="text-2xl font-extrabold text-gray-900 mt-6">
+            Sign in to Opus Agents
+          </h1>
           <p className="text-gray-500 mt-2 text-sm">
             Create, test and deploy AI agents with your own account.
           </p>
