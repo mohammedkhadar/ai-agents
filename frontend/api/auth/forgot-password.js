@@ -24,23 +24,22 @@ export default async function handler(req, res) {
     // Always return success — don't reveal whether the email exists
     const successMsg = { message: 'If that email exists, a reset link has been sent.' };
 
-    if (!user) {
-      return res.status(200).json({
-        message: 'If that email exists, a reset link has been sent.',
-        _debug: { hasResendKey: !!RESEND_API_KEY, hasMongo: !!mongoConn, hasMongoUri: !!process.env.MONGODB_URI, userFound: false },
-      });
-    }
-
-    let mongoUriPreview = 'set';
+    let mongoError = 'none';
     if (!mongoConn) {
       try {
-        // Quick connection test to capture error
         const { createRequire } = require('module');
         const mongoose = createRequire(__filename)('mongoose');
         await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
       } catch (e) {
-        mongoUriPreview = 'set-but-error: ' + e.message.slice(0, 200);
+        mongoError = e.message.slice(0, 200);
       }
+    }
+
+    if (!user) {
+      return res.status(200).json({
+        message: 'If that email exists, a reset link has been sent.',
+        _debug: { hasResendKey: !!RESEND_API_KEY, hasMongo: !!mongoConn, hasMongoUri: !!process.env.MONGODB_URI, userFound: false, mongoError },
+      });
     }
 
     // Generate a password reset token (valid for 1 hour)
