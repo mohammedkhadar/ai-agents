@@ -1,6 +1,6 @@
 import { setCors } from '../_lib/session.js';
 import { signToken } from '../_lib/tokens.js';
-import { findUserByEmail } from '../_lib/users.js';
+import { findUserByEmail, connectDB } from '../_lib/users.js';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_FROM = process.env.RESEND_FROM || 'Opus Agents <password-reset@opusagents.website>';
@@ -18,6 +18,7 @@ export default async function handler(req, res) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const mongoConn = await connectDB();
     const user = await findUserByEmail(normalizedEmail);
 
     // Always return success — don't reveal whether the email exists
@@ -26,7 +27,7 @@ export default async function handler(req, res) {
     if (!user) {
       return res.status(200).json({
         message: 'If that email exists, a reset link has been sent.',
-        _debug: { hasResendKey: !!RESEND_API_KEY, userFound: false },
+        _debug: { hasResendKey: !!RESEND_API_KEY, hasMongo: !!mongoConn, hasMongoUri: !!process.env.MONGODB_URI, userFound: false },
       });
     }
 
