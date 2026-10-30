@@ -1,5 +1,5 @@
 import { setCors } from '../_lib/session.js';
-import { findUserByEmail, createUser, hashPassword, publicUser, signSession, getDebugInfo } from '../_lib/users.js';
+import { findUserByEmail, createUser, hashPassword, publicUser, signSession } from '../_lib/users.js';
 
 export default async function handler(req, res) {
   if (setCors(req, res)) return;
@@ -41,9 +41,9 @@ export default async function handler(req, res) {
     // Create session token
     const pub = publicUser(user);
     const token = signSession(pub);
-    res.status(201).json({ token, user: pub, _debug: getDebugInfo() });
+    res.status(201).json({ token, user: pub });
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ message: error.message || 'Registration failed', _debug: getDebugInfo() });
+    res.status(500).json({ message: error.message || 'Registration failed' });
   }
 }

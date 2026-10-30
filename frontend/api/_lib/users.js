@@ -48,17 +48,13 @@ let nextId = 1;
 let mongooseModule = null;
 let UserModel = null;
 let cachedConn = null;
-let mongoError = null;
 
-// Attempt mongoose import at module load time
 try {
-  // Use createRequire for CJS compatibility in Vercel serverless
   const { createRequire } = require('module');
   const req = createRequire(__filename);
   mongooseModule = req('mongoose');
 } catch (e) {
-  mongoError = e.message;
-  // mongoose not available
+  // mongoose not available — will use in-memory fallback
 }
 
 // Mongoose schema/model setup (deferred until first use)
@@ -77,20 +73,9 @@ function setupModel() {
     UserModel = mongooseModule.model('User', userSchema);
     ModelReady = true;
   } catch (e) {
-    mongoError = e.message;
+    // Schema compilation failed — will use in-memory fallback
   }
 }
-
-// Debug helper
-export const getDebugInfo = () => ({
-  hasMongoose: !!mongooseModule,
-  hasModel: !!UserModel,
-  hasConn: !!cachedConn,
-  hasMongoUri: !!process.env.MONGODB_URI,
-  mongoError: mongoError,
-  nextId,
-  memoryCount: memoryUsers.length,
-});
 
 export async function connectDB() {
   if (!mongooseModule) return null;

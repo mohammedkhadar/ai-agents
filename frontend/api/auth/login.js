@@ -18,11 +18,7 @@ export default async function handler(req, res) {
     const user = await findUserByEmail(normalizedEmail);
 
     if (!user || !verifyUserPassword(password, user.passwordHash)) {
-      const usingMemory = !process.env.MONGODB_URI;
-      const detail = usingMemory
-        ? ' Ensure MONGODB_URI is set in Vercel for persistent user storage. Registration works for immediate sessions.'
-        : '';
-      return res.status(401).json({ message: 'Invalid email or password' + detail });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     const pub = publicUser(user);
