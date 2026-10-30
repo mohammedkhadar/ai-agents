@@ -93,7 +93,6 @@ export async function connectDB() {
     return cachedConn;
   } catch (e) {
     console.error('[auth] MongoDB connection error:', e.message);
-    mongoError = e.message;
     cachedConn = null;
     return null;
   }
