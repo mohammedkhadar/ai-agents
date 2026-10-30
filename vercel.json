@@ -12,6 +12,18 @@
   },
   "rewrites": [
     {
+      "source": "/api/auth/register",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/api/auth/login",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
       "source": "/api/auth/(.*)",
       "destination": {
         "service": "frontend"

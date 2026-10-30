@@ -9,9 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.3",
     "mammoth": "^1.13.0",
-    "mongoose": "^9.11.4",
     "pdf-parse": "^2.4.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
