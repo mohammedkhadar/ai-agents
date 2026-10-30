@@ -129,3 +129,20 @@ export async function createUser({ email, username, passwordHash }) {
   await user.save();
   return user;
 }
+
+export async function updateUserPassword(email, passwordHash) {
+  const conn = await connectDB();
+  if (!conn || !UserModel) {
+    const user = memoryUsers.find(u => u.email === email);
+    if (!user) throw new Error('User not found');
+    user.passwordHash = passwordHash;
+    return user;
+  }
+  const user = await UserModel.findOneAndUpdate(
+    { email },
+    { passwordHash },
+    { new: true }
+  );
+  if (!user) throw new Error('User not found');
+  return user;
+}

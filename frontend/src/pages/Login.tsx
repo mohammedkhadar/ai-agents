@@ -15,6 +15,10 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showResetRequest, setShowResetRequest] = useState(false);
+  const [resetToken, setResetToken] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const from = (location.state as any)?.from || '/agents';
 
   const done = () => navigate(from, { replace: true });
@@ -99,6 +103,67 @@ const Login: React.FC = () => {
       done();
     } catch (e) {
       setError((e as Error).message);
+      setBusy(null);
+    }
+  };
+
+  // Password reset: check for ?token= in URL on page load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      setResetToken(token);
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setBusy('email');
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to send reset link');
+      // In dev mode, the reset link is returned in the response
+      if (data._resetLink) {
+        // Extract token from the link and auto-show the reset form
+        const url = new URL(data._resetLink);
+        const token = url.searchParams.get('token');
+        if (token) setResetToken(token);
+      } else {
+        setError('Reset link sent! Check your email.');
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setBusy('email');
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetToken, password: newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to reset password');
+      // Success — user is now logged in
+      localStorage.removeItem('guest_session');
+      import('../lib/storage').then(m => m.setStoredToken(data.token));
+      done();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
       setBusy(null);
     }
   };
@@ -190,72 +255,142 @@ const Login: React.FC = () => {
               </button>
             </div>
           ) : (
-            <form onSubmit={handleEmailLogin} className="mt-4 space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoComplete="email"
-                />
-              </div>
-              {isRegister && (
+            <div>
+              <form onSubmit={handleEmailLogin} className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Username</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
                   <input
-                    type="text"
+                    type="email"
                     required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    autoComplete="username"
+                    autoComplete="email"
                   />
                 </div>
-              )}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoComplete={isRegister ? 'new-password' : 'current-password'}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={busy === 'email'}
-                className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {busy === 'email' ? 'Working…' : (isRegister ? 'Create Account' : 'Sign In')}
-              </button>
-              <div className="flex items-center justify-between text-xs text-gray-500">
+                {isRegister && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Username</label>
+                    <input
+                      type="text"
+                      required
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoComplete="username"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoComplete={isRegister ? 'new-password' : 'current-password'}
+                  />
+                </div>
+                {!isRegister && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowResetRequest(true); setResetEmail(email); }}
+                    className="text-left text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Forgot your password?
+                  </button>
+                )}
                 <button
-                  type="button"
-                  onClick={() => setIsRegister(!isRegister)}
-                  className="hover:text-gray-900"
+                  type="submit"
+                  disabled={busy === 'email'}
+                  className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
-                  {isRegister ? 'Have an account? Sign In' : 'New here? Create Account'}
+                  {busy === 'email' ? 'Working…' : (isRegister ? 'Create Account' : 'Sign In')}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowEmailForm(false); setError(''); }}
-                  className="hover:text-gray-900"
-                >
-                  Back to SSO
-                </button>
-              </div>
-              {!isRegister && (
-                <p className="text-xs text-amber-600 mt-2">
-                  ⚠️ First time? Create an account above. For returning-user login, set MONGODB_URI in Vercel project settings and redeploy.
-                </p>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <button
+                    type="button"
+                    onClick={() => setIsRegister(!isRegister)}
+                    className="hover:text-gray-900"
+                  >
+                    {isRegister ? 'Have an account? Sign In' : 'New here? Create Account'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowEmailForm(false); setShowResetRequest(false); setResetToken(''); setError(''); }}
+                    className="hover:text-gray-900"
+                  >
+                    Back to SSO
+                  </button>
+                </div>
+                {!isRegister && !showResetRequest && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    ⚠️ First time? Create an account above. For returning-user login, set MONGODB_URI in Vercel project settings and redeploy.
+                  </p>
+                )}
+              </form>
+
+              {/* Password Reset Request Form */}
+              {showResetRequest && !resetToken && (
+                <form onSubmit={handleForgotPassword} className="mt-4 space-y-3 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-700">Reset your password</h3>
+                  <p className="text-xs text-gray-500">Enter your email and we'll send a reset link.</p>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoComplete="email"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={busy === 'email'}
+                    className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {busy === 'email' ? 'Sending…' : 'Send Reset Link'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowResetRequest(false)}
+                    className="text-xs text-gray-500 hover:text-gray-900"
+                  >
+                    Back to login
+                  </button>
+                </form>
               )}
-            </form>
+
+              {/* Password Reset Form (when token is present) */}
+              {resetToken && (
+                <form onSubmit={handleResetPassword} className="mt-4 space-y-3 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-700">Enter new password</h3>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">New Password</label>
+                    <input
+                      type="password"
+                      required
+                      minLength={8}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={busy === 'email'}
+                    className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {busy === 'email' ? 'Resetting…' : 'Reset Password'}
+                  </button>
+                </form>
+              )}
+            </div>
           )}
 
           {!anySso && (
