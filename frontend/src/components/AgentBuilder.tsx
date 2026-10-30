@@ -1,6 +1,41 @@
 import React, { useState } from 'react';
 import KnowledgeUploader, { KnowledgeBase } from './KnowledgeUploader';
 
+// Step icons — each receives `active` prop to switch colors
+const IconUser = ({ active }: { active: boolean }) => (
+  <svg className={`w-4 h-4 ${active ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
+const IconDocument = ({ active }: { active: boolean }) => (
+  <svg className={`w-4 h-4 ${active ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2-10H7a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V8a2 2 0 00-2-2z" />
+  </svg>
+);
+const IconTarget = ({ active }: { active: boolean }) => (
+  <svg className={`w-4 h-4 ${active ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9V5l3 3m0 0H9m12 7a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+const IconIndustry = ({ active }: { active: boolean }) => (
+  <svg className={`w-4 h-4 ${active ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v10h14zM7 21h10" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6M9 11h6" />
+  </svg>
+);
+const IconStar = ({ active }: { active: boolean }) => (
+  <svg className={`w-4 h-4 ${active ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 17.27L18.18 21l-1.68-7.03L22 9.24l-4.12-.34L12 2 6.12 8.9 2 11.26l5.46 4.73L12 17.27z" />
+  </svg>
+);
+const IconBook = ({ active }: { active: boolean }) => (
+  <svg className={`w-4 h-4 ${active ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.257v13m0 0c-1.36-.37-2-.78-3-1.25A4.5 4.5 0 016.5 15a4.5 4.5 0 011.46-3.25L12 8.5l4.04 3.25A4.5 4.5 0 0119.5 15a4.5 4.5 0 01-1.5 1.5 5.73 5.73 0 01-3 1.25z" />
+  </svg>
+);
+
+const stepIcons = [IconUser, IconDocument, IconTarget, IconIndustry, IconStar, IconBook];
+
 export interface AgentConfig {
   name: string;
   description: string;
@@ -125,18 +160,23 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onComplete }) => {
       {/* Step Progress */}
       <div className="mb-6">
         <nav className="flex space-x-2">
-          {stepLabels.map((step, index) => (
-            <div
-              key={index}
-              className={`flex-1 rounded px-3 py-2 text-sm font-medium ${
-                index + 1 <= currentStep
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              {step}
-            </div>
-          ))}
+          {stepLabels.map((step, index) => {
+            const isActive = index + 1 <= currentStep;
+            const Icon = stepIcons[index];
+            return (
+              <div
+                key={index}
+                className={`flex items-center justify-center gap-1.5 flex-1 rounded px-3 py-2 text-sm font-medium ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}
+              >
+                <Icon active={isActive} />
+                <span>{step}</span>
+              </div>
+            );
+          })}
         </nav>
         <p className="mt-2 text-sm text-gray-500">
           Step {currentStep} of {stepLabels.length}
