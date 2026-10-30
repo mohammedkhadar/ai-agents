@@ -1,6 +1,6 @@
 import { setCors } from '../_lib/session.js';
 import { signToken } from '../_lib/tokens.js';
-import { findUserByEmail, connectDB } from '../_lib/users.js';
+import { findUserByEmail } from '../_lib/users.js';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_FROM = process.env.RESEND_FROM || 'Opus Agents <password-reset@opusagents.website>';
@@ -18,28 +18,13 @@ export default async function handler(req, res) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const mongoConn = await connectDB();
     const user = await findUserByEmail(normalizedEmail);
 
     // Always return success — don't reveal whether the email exists
     const successMsg = { message: 'If that email exists, a reset link has been sent.' };
 
-    let mongoError = 'none';
-    if (!mongoConn) {
-      try {
-        const { createRequire } = require('module');
-        const mongoose = createRequire(__filename)('mongoose');
-        await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
-      } catch (e) {
-        mongoError = e.message.slice(0, 200);
-      }
-    }
-
     if (!user) {
-      return res.status(200).json({
-        message: 'If that email exists, a reset link has been sent.',
-        _debug: { hasResendKey: !!RESEND_API_KEY, hasMongo: !!mongoConn, hasMongoUri: !!process.env.MONGODB_URI, userFound: false, mongoError },
-      });
+      return res.status(200).json(successMsg);
     }
 
     // Generate a password reset token (valid for 1 hour)
@@ -51,7 +36,6 @@ export default async function handler(req, res) {
     const resetLink = `https://www.opusagents.website/login?token=${resetToken}`;
 
     // Send email via Resend if API key is configured
-    let emailStatus = 'not-attempted';
     if (RESEND_API_KEY) {
       try {
         const emailRes = await fetch('https://api.resend.com/emails', {
@@ -77,20 +61,13 @@ export default async function handler(req, res) {
         if (!emailRes.ok) {
           const err = await emailRes.text();
           console.error('Resend error:', err);
-          emailStatus = `error:${emailRes.status}`;
-        } else {
-          emailStatus = 'sent';
         }
       } catch (emailError) {
         console.error('Email send error:', emailError);
-        emailStatus = 'error:' + emailError.message?.slice(0, 100);
       }
     }
 
-    res.status(200).json({
-      ...successMsg,
-      _debug: { hasResendKey: !!RESEND_API_KEY, userFound: true, emailStatus },
-    });
+    res.status(200).json(successMsg);
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: error.message || 'Error processing request' });
