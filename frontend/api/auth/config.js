@@ -13,5 +13,6 @@ export default function handler(req, res) {
     github: process.env.GITHUB_CLIENT_ID || '',
     hasGithubSecret: !!process.env.GITHUB_CLIENT_SECRET,
     hasAuthSecret: !!process.env.AUTH_SECRET,
+    emailPassword: true,
   });
 }

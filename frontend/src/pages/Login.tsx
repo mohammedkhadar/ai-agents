@@ -5,11 +5,16 @@ import { SSO_CONFIG } from '../lib/ssoConfig';
 import Logo from '../components/Logo';
 
 const Login: React.FC = () => {
-  const { ssoConfig, signInWithGoogleCredential, buildGitHubAuthorizeUrl, completeGitHubSignIn } = useAuth();
+  const { ssoConfig, signInWithGoogleCredential, buildGitHubAuthorizeUrl, completeGitHubSignIn, signInWithEmailPassword, registerWithEmailPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState<'google' | 'github' | null>(null);
+  const [busy, setBusy] = useState<'google' | 'github' | 'email' | null>(null);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const from = (location.state as any)?.from || '/agents';
 
   const done = () => navigate(from, { replace: true });
@@ -79,6 +84,23 @@ const Login: React.FC = () => {
       return;
     }
     window.location.href = url;
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setBusy('email');
+    try {
+      if (isRegister) {
+        await registerWithEmailPassword(email, username, password);
+      } else {
+        await signInWithEmailPassword(email, password);
+      }
+      done();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(null);
+    }
   };
 
   const hasGoogle = !!(ssoConfig?.google || SSO_CONFIG.googleClientId);
@@ -155,6 +177,81 @@ const Login: React.FC = () => {
 
             {anySso && <div className="flex items-center gap-3 my-2"><div className="flex-1 h-px bg-gray-200" /></div>}
           </div>
+
+          {/* Email / Password Form */}
+          {!showEmailForm ? (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => { setShowEmailForm(true); setError(''); }}
+                className="w-full text-center text-sm text-gray-600 hover:text-gray-900 py-1 transition-colors"
+              >
+                Use email instead
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleEmailLogin} className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoComplete="email"
+                />
+              </div>
+              {isRegister && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Username</label>
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoComplete="username"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={busy === 'email'}
+                className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {busy === 'email' ? 'Working…' : (isRegister ? 'Create Account' : 'Sign In')}
+              </button>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <button
+                  type="button"
+                  onClick={() => setIsRegister(!isRegister)}
+                  className="hover:text-gray-900"
+                >
+                  {isRegister ? 'Have an account? Sign In' : 'New here? Create Account'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowEmailForm(false); setError(''); }}
+                  className="hover:text-gray-900"
+                >
+                  Back to SSO
+                </button>
+              </div>
+            </form>
+          )}
 
           {!anySso && (
             <details className="mt-6 text-sm text-gray-600">

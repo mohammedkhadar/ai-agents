@@ -13,7 +13,7 @@ export interface AuthUser {
   name: string;
   email?: string | null;
   avatar?: string | null;
-  provider: 'google' | 'github' | 'guest';
+  provider: 'google' | 'github' | 'email' | 'guest';
 }
 
 interface AuthSsoConfig {
@@ -21,6 +21,7 @@ interface AuthSsoConfig {
   github: string;
   hasGithubSecret: boolean;
   hasAuthSecret: boolean;
+  emailPassword: boolean;
 }
 
 interface AuthContextValue {
@@ -30,6 +31,8 @@ interface AuthContextValue {
   signInWithGoogleCredential: (credential: string) => Promise<void>;
   buildGitHubAuthorizeUrl: () => string | null;
   completeGitHubSignIn: (code: string) => Promise<void>;
+  signInWithEmailPassword: (email: string, password: string) => Promise<void>;
+  registerWithEmailPassword: (email: string, username: string, password: string) => Promise<void>;
   continueAsGuest: (name?: string) => void;
   signOut: () => void;
 }
@@ -111,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           github: cfg.github || SSO_CONFIG.githubClientId,
           hasGithubSecret: cfg.hasGithubSecret || false,
           hasAuthSecret: cfg.hasAuthSecret || false,
+          emailPassword: cfg.emailPassword !== false,
         })
       )
       .catch(() =>
@@ -119,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           github: SSO_CONFIG.githubClientId,
           hasGithubSecret: false,
           hasAuthSecret: false,
+          emailPassword: true,
         })
       );
   }, []);
@@ -179,6 +184,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     migrateLegacyAgents(data.user.uid);
   }, [SSO_CONFIG.githubClientId]);
 
+  const signInWithEmailPassword = useCallback(async (email: string, password: string) => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.token) {
+      throw new Error(data.message || 'Login failed');
+    }
+    localStorage.removeItem('guest_session');
+    setStoredToken(data.token);
+    setUser(data.user);
+    migrateLegacyAgents(data.user.uid);
+  }, []);
+
+  const registerWithEmailPassword = useCallback(async (email: string, username: string, password: string) => {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.token) {
+      throw new Error(data.message || 'Registration failed');
+    }
+    localStorage.removeItem('guest_session');
+    setStoredToken(data.token);
+    setUser(data.user);
+    migrateLegacyAgents(data.user.uid);
+  }, []);
+
   const continueAsGuest = useCallback((name?: string) => {
     const guest: AuthUser = {
       uid: 'guest-' + Math.random().toString(36).slice(2, 10),
@@ -208,6 +245,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInWithGoogleCredential,
         buildGitHubAuthorizeUrl,
         completeGitHubSignIn,
+        signInWithEmailPassword,
+        registerWithEmailPassword,
         continueAsGuest,
         signOut,
       }}
