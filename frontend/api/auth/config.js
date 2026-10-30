@@ -15,5 +15,6 @@ export default function handler(req, res) {
     hasAuthSecret: !!process.env.AUTH_SECRET,
     emailPassword: true,
     hasMongoUri: !!process.env.MONGODB_URI,
+    _v: '2',
   });
 }
