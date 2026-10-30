@@ -3,6 +3,7 @@ import { signToken } from '../_lib/tokens.js';
 import { findUserByEmail } from '../_lib/users.js';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_FROM = process.env.RESEND_FROM || 'Opus Agents <password-reset@opusagents.website>';
 
 export default async function handler(req, res) {
   if (setCors(req, res)) return;
@@ -37,15 +38,15 @@ export default async function handler(req, res) {
     // Send email via Resend if API key is configured
     if (RESEND_API_KEY) {
       try {
-        const emailRes = await fetch('https://api.resend.com/email', {
+        const emailRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'password-reset@opusagents.website',
-            to: normalizedEmail,
+            from: RESEND_FROM,
+            to: [normalizedEmail],
             subject: 'Your password reset link',
             html: `
               <p>Hello,${user.username ? ' ' + user.username : ''}</p>
