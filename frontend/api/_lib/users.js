@@ -44,51 +44,86 @@ export const publicUser = (user) => ({
 const memoryUsers = [];
 let nextId = 1;
 
+// Try to import mongoose (will be available when installed in package.json)
+let mongooseModule = null;
 let UserModel = null;
 let cachedConn = null;
+let mongoError = null;
 
-async function loadMongoose() {
-  if (UserModel) return UserModel;
-  if (cachedConn === false) return null; // already tried and failed
+// Attempt mongoose import at module load time
+try {
+  // Use createRequire for CJS compatibility in Vercel serverless
+  const { createRequire } = require('module');
+  const req = createRequire(__filename);
+  mongooseModule = req('mongoose');
+} catch (e) {
+  mongoError = e.message;
+  // mongoose not available
+}
+
+// Mongoose schema/model setup (deferred until first use)
+let ModelReady = false;
+
+function setupModel() {
+  if (!mongooseModule) return;
+  if (ModelReady) return;
   try {
-    const mongoose = (await import('mongoose')).default;
-    const userSchema = new mongoose.Schema({
+    const userSchema = new mongooseModule.Schema({
       email: { type: String, required: true, unique: true, lowercase: true, trim: true },
       username: { type: String, required: true, trim: true },
       passwordHash: { type: String, required: true },
       provider: { type: String, default: 'email' },
     }, { timestamps: true });
-    UserModel = mongoose.model('User', userSchema);
-
-    // Try to connect
-    if (process.env.MONGODB_URI) {
-      try {
-        await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
-        cachedConn = mongoose.connection;
-      } catch (e) {
-        console.error('MongoDB connection error:', e.message);
-        cachedConn = null;
-      }
-    }
-  } catch {
-    cachedConn = false; // mark as tried
+    UserModel = mongooseModule.model('User', userSchema);
+    ModelReady = true;
+  } catch (e) {
+    mongoError = e.message;
   }
-  return UserModel;
+}
+
+// Debug helper
+export const getDebugInfo = () => ({
+  hasMongoose: !!mongooseModule,
+  hasModel: !!UserModel,
+  hasConn: !!cachedConn,
+  hasMongoUri: !!process.env.MONGODB_URI,
+  mongoError: mongoError,
+  nextId,
+  memoryCount: memoryUsers.length,
+});
+
+export async function connectDB() {
+  if (!mongooseModule) return null;
+  if (cachedConn) return cachedConn;
+
+  setupModel();
+
+  const uri = process.env.MONGODB_URI;
+  if (!uri) return null;
+
+  try {
+    await mongooseModule.connect(uri, { serverSelectionTimeoutMS: 5000 });
+    cachedConn = mongooseModule.connection;
+    console.log('[auth] MongoDB connected');
+    return cachedConn;
+  } catch (e) {
+    console.error('[auth] MongoDB connection error:', e.message);
+    cachedConn = null;
+    return null;
+  }
 }
 
 export async function findUserByEmail(email) {
-  const Model = await loadMongoose();
-  console.log('[auth] findUserByEmail:', { hasModel: !!Model, hasConn: !!cachedConn, hasMongoUri: !!process.env.MONGODB_URI });
-  if (!Model || !cachedConn) {
+  const conn = await connectDB();
+  if (!conn || !UserModel) {
     return memoryUsers.find(u => u.email === email) || null;
   }
-  return await Model.findOne({ email });
+  return await UserModel.findOne({ email });
 }
 
 export async function createUser({ email, username, passwordHash }) {
-  const Model = await loadMongoose();
-  console.log('[auth] createUser:', { hasModel: !!Model, hasConn: !!cachedConn, hasMongoUri: !!process.env.MONGODB_URI });
-  if (!Model || !cachedConn) {
+  const conn = await connectDB();
+  if (!conn || !UserModel) {
     const existing = memoryUsers.find(u => u.email === email);
     if (existing) throw new Error('Email already registered');
     const user = {
@@ -103,9 +138,9 @@ export async function createUser({ email, username, passwordHash }) {
     memoryUsers.push(user);
     return user;
   }
-  const existing = await Model.findOne({ email });
+  const existing = await UserModel.findOne({ email });
   if (existing) throw new Error('Email already registered');
-  const user = new Model({ email, username, passwordHash, provider: 'email' });
+  const user = new UserModel({ email, username, passwordHash, provider: 'email' });
   await user.save();
   return user;
 }
