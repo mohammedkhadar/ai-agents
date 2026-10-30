@@ -40,54 +40,53 @@ export const publicUser = (user) => ({
   provider: user.provider || 'email',
 });
 
-// --- MongoDB model (optional — uses mongoose if available) ---
-let UserModel = null;
-let mongoose = null;
-
-try {
-  mongoose = (await import('mongoose')).default;
-} catch {
-  // mongoose not installed — will use in-memory fallback
-}
-
-if (mongoose) {
-  const userSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    username: { type: String, required: true, trim: true },
-    passwordHash: { type: String, required: true },
-    provider: { type: String, default: 'email' },
-  }, { timestamps: true });
-  UserModel = mongoose.model('User', userSchema);
-}
-
-// In-memory fallback
+// In-memory fallback when MongoDB is not configured
 const memoryUsers = [];
 let nextId = 1;
 
+let UserModel = null;
 let cachedConn = null;
-const connectDB = async () => {
-  if (!mongoose || !process.env.MONGODB_URI) return null;
-  if (cachedConn) return cachedConn;
+
+async function loadMongoose() {
+  if (UserModel) return UserModel;
+  if (cachedConn === false) return null; // already tried and failed
   try {
-    await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
-    cachedConn = mongoose.connection;
-    return cachedConn;
+    const mongoose = (await import('mongoose')).default;
+    const userSchema = new mongoose.Schema({
+      email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+      username: { type: String, required: true, trim: true },
+      passwordHash: { type: String, required: true },
+      provider: { type: String, default: 'email' },
+    }, { timestamps: true });
+    UserModel = mongoose.model('User', userSchema);
+
+    // Try to connect
+    if (process.env.MONGODB_URI) {
+      try {
+        await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
+        cachedConn = mongoose.connection;
+      } catch (e) {
+        console.error('MongoDB connection error:', e.message);
+        cachedConn = null;
+      }
+    }
   } catch {
-    return null;
+    cachedConn = false; // mark as tried
   }
-};
+  return UserModel;
+}
 
 export async function findUserByEmail(email) {
-  const conn = await connectDB();
-  if (!conn || !UserModel) {
+  const Model = await loadMongoose();
+  if (!Model || !cachedConn) {
     return memoryUsers.find(u => u.email === email) || null;
   }
-  return await UserModel.findOne({ email });
+  return await Model.findOne({ email });
 }
 
 export async function createUser({ email, username, passwordHash }) {
-  const conn = await connectDB();
-  if (!conn || !UserModel) {
+  const Model = await loadMongoose();
+  if (!Model || !cachedConn) {
     const existing = memoryUsers.find(u => u.email === email);
     if (existing) throw new Error('Email already registered');
     const user = {
@@ -102,9 +101,9 @@ export async function createUser({ email, username, passwordHash }) {
     memoryUsers.push(user);
     return user;
   }
-  const existing = await UserModel.findOne({ email });
+  const existing = await Model.findOne({ email });
   if (existing) throw new Error('Email already registered');
-  const user = new UserModel({ email, username, passwordHash, provider: 'email' });
+  const user = new Model({ email, username, passwordHash, provider: 'email' });
   await user.save();
   return user;
 }
