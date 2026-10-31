@@ -62,14 +62,7 @@ const Navbar: React.FC = () => {
                 Sign out
               </button>
             </div>
-          ) : (
-            <Link
-              to="/login"
-              className="ml-2 px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Sign in
-            </Link>
-          )}
+          ) : null}
         </div>
       </div>
     </header>
