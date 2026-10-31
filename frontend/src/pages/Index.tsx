@@ -33,7 +33,7 @@ const Index: React.FC = () => {
             className="w-full aspect-video"
           />
           <p className="text-center text-sm text-gray-500 py-3 bg-white">
-            🎬 Watch our quick tutorial to get started with Opus Agents
+            🎬 Watch our walkthrough of Opus Agents
           </p>
         </div>
 
