@@ -327,8 +327,8 @@ const Login: React.FC = () => {
                   </button>
                 </div>
                 {!isRegister && !showResetRequest && (
-                  <p className="text-xs text-amber-600 mt-2">
-                    ⚠️ First time? Create an account above. For returning-user login, set MONGODB_URI in Vercel project settings and redeploy.
+                  <p className="text-xs text-gray-500 mt-2">
+                    Enter your email and password above to sign in.
                   </p>
                 )}
               </form>
