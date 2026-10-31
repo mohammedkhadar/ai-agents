@@ -36,6 +36,7 @@ export default async function handler(req, res) {
     const resetLink = `https://www.opusagents.website/login?token=${resetToken}`;
 
     // Send email via Resend if API key is configured
+    let emailStatus = 'not-attempted';
     if (RESEND_API_KEY) {
       try {
         const emailRes = await fetch('https://api.resend.com/emails', {
@@ -61,13 +62,20 @@ export default async function handler(req, res) {
         if (!emailRes.ok) {
           const err = await emailRes.text();
           console.error('Resend error:', err);
+          emailStatus = `error:${emailRes.status}`
+        } else {
+          emailStatus = 'sent';
         }
       } catch (emailError) {
         console.error('Email send error:', emailError);
+        emailStatus = 'error:' + (emailError.message?.slice(0, 100) || 'unknown');
       }
     }
 
-    res.status(200).json(successMsg);
+    res.status(200).json({
+      ...successMsg,
+      _debug: { emailStatus, hasResendKey: !!RESEND_API_KEY },
+    });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: error.message || 'Error processing request' });
