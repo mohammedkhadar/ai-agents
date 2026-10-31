@@ -154,7 +154,7 @@ const Agents: React.FC = () => {
                     onClick={() => navigate(`/test-agent/${agent._id}`)}
                     className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
                   >
-                    Chat / Test
+                    Chat
                   </button>
                   <button
                     onClick={() => navigate(`/agent/${agent._id}`)}
