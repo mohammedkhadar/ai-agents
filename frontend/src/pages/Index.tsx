@@ -21,6 +21,22 @@ const Index: React.FC = () => {
           </p>
         </header>
 
+        {/* Video Tutorial */}
+        <div className="mb-12 rounded-2xl overflow-hidden shadow-lg bg-black">
+          <video
+            src="/tutorial.mp4"
+            autoPlay
+            muted
+            loop
+            controls
+            playsInline
+            className="w-full aspect-video"
+          />
+          <p className="text-center text-sm text-gray-500 py-3 bg-white">
+            🎬 Watch our 30-second tutorial to get started with Opus Agents
+          </p>
+        </div>
+
         <main>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow flex flex-col justify-between">
