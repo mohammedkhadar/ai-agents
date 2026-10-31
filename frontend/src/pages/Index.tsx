@@ -1,26 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import Logo from '../components/Logo';
 
 const Index: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 pt-12">
-        <header className="text-center mb-12">
-          <div className="flex justify-center mb-6">
-            <Logo size="lg" />
-          </div>
-          <h1 className="text-4xl font-extrabold text-indigo-600 mb-4">
-            Opus Agents
-          </h1>
-          <p className="text-lg text-gray-600">
-            Create, test and deploy AI agents through natural conversation or step-by-step configuration.
-            No programming expertise required.
-          </p>
-        </header>
-
         <main>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow flex flex-col justify-between">
