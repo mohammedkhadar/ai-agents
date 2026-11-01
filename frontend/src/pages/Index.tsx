@@ -7,6 +7,22 @@ const Index: React.FC = () => {
     <div className="min-h-screen bg-[#f7f7f4]">
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 pt-12">
+        {/* Product Launch Video */}
+        <div className="mb-12 rounded-2xl overflow-hidden shadow-lg bg-black">
+          <video
+            src="/tutorial.mp4"
+            autoPlay
+            muted
+            loop
+            controls
+            playsInline
+            className="w-full aspect-video"
+          />
+          <p className="text-center text-sm text-[#5a5852] py-3 bg-white">
+            🎬 Product launch video — see what Opus Agents can do
+          </p>
+        </div>
+
         <main>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow flex flex-col justify-between border border-[#e6e5e0]">
