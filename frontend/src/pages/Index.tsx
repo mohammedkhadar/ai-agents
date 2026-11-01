@@ -7,22 +7,6 @@ const Index: React.FC = () => {
     <div className="min-h-screen bg-[#f7f7f4]">
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 pt-12">
-        {/* Product Launch Presentation */}
-        <div className="mb-12 rounded-2xl p-8 shadow-lg border border-[#e6e5e0] bg-white text-center">
-          <div className="text-6xl mb-4">📊</div>
-          <h2 className="text-2xl font-bold text-[#26251e] mb-2">Opus Agents — Product Overview</h2>
-          <p className="text-[#5a5852] mb-6">
-            Download our presentation to learn about building, testing, and deploying AI agents.
-          </p>
-          <a
-            href="/opus_agents.pptx"
-            download
-            className="inline-block px-8 py-4 bg-[#f54e00] text-white font-medium rounded-lg hover:bg-[#d04200] transition-colors text-lg"
-          >
-            Download PPT →
-          </a>
-        </div>
-
         <main>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow flex flex-col justify-between border border-[#e6e5e0]">
