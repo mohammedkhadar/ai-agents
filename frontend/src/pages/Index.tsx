@@ -7,20 +7,20 @@ const Index: React.FC = () => {
     <div className="min-h-screen bg-[#f7f7f4]">
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 pt-12">
-        {/* Product Launch Video */}
-        <div className="mb-12 rounded-2xl overflow-hidden shadow-lg bg-black">
-          <video
-            src="/tutorial.mp4"
-            autoPlay
-            muted
-            loop
-            controls
-            playsInline
-            className="w-full aspect-video"
-          />
-          <p className="text-center text-sm text-[#5a5852] py-3 bg-white">
-            🎬 Product launch video — see what Opus Agents can do
+        {/* Product Launch Presentation */}
+        <div className="mb-12 rounded-2xl p-8 shadow-lg border border-[#e6e5e0] bg-white text-center">
+          <div className="text-6xl mb-4">📊</div>
+          <h2 className="text-2xl font-bold text-[#26251e] mb-2">Opus Agents — Product Overview</h2>
+          <p className="text-[#5a5852] mb-6">
+            Download our presentation to learn about building, testing, and deploying AI agents.
           </p>
+          <a
+            href="/opus_agents.pptx"
+            download
+            className="inline-block px-8 py-4 bg-[#f54e00] text-white font-medium rounded-lg hover:bg-[#d04200] transition-colors text-lg"
+          >
+            Download PPT →
+          </a>
         </div>
 
         <main>
