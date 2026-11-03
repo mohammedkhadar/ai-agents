@@ -7,6 +7,20 @@ const Index: React.FC = () => {
     <div className="min-h-screen bg-[#f7f7f4]">
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 pt-12">
+        <div className="mb-8 rounded-2xl p-6 shadow-lg border border-[#e6e5e0] bg-white text-center">
+          <h2 className="text-xl font-bold text-[#26251e] mb-2">📊 Investor Pitch Deck</h2>
+          <p className="text-[#5a5852] mb-4 text-sm">
+            Download our investor pitch deck to learn about the opportunity.
+          </p>
+          <a
+            href="/investor_pitch.pptx"
+            download
+            className="inline-block px-6 py-3 bg-[#f54e00] text-white font-medium rounded-lg hover:bg-[#d04200] transition-colors"
+          >
+            Download Pitch Deck →
+          </a>
+        </div>
+
         <main>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow flex flex-col justify-between border border-[#e6e5e0]">
