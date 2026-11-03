@@ -7,6 +7,9 @@ const Index: React.FC = () => {
     <div className="min-h-screen bg-[#f7f7f4]">
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 pt-12">
+        <p className="text-center text-lg text-[#5a5852] mb-8 max-w-2xl mx-auto">
+          Opus Agents is a no-code platform that allows companies to create AI agents, train them with their own data, and deploy them without programming.
+        </p>
         <main>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow flex flex-col justify-between border border-[#e6e5e0]">
