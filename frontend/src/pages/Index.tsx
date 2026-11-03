@@ -8,7 +8,7 @@ const Index: React.FC = () => {
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 pt-12">
         <p className="text-center text-lg text-[#5a5852] mb-8 max-w-2xl mx-auto">
-          Opus Agents is a no-code platform that allows companies to create AI agents, train them with their own data, and deploy them without programming.
+          Opus Agents is a <span className="text-[#f54e00] font-bold">no-code platform</span> that allows companies to create <span className="text-[#f54e00] font-bold">AI agents</span>, train them with their <span className="text-[#f54e00] font-bold">own data</span>, and <span className="text-[#f54e00] font-bold">deploy</span> them without programming.
         </p>
         <main>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
